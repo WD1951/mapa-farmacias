@@ -1,0 +1,63 @@
+name: Atualizar farmácias
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # todo dia, 3h da manhã de Brasília
+  workflow_dispatch:      # botão para rodar na hora
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Buscar farmácias da cidade de São Paulo
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request, urllib.parse, datetime, time
+          q = '[out:json][timeout:180];nwr["amenity"="pharmacy"](-24.01,-46.83,-23.35,-46.36);out center tags;'
+          servidores = [
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.private.coffee/api/interpreter",
+            "https://overpass.kumi.systems/api/interpreter",
+          ]
+          dados = None
+          for tentativa in range(3):
+            for url in servidores:
+              try:
+                req = urllib.request.Request(url, data=urllib.parse.urlencode({"data": q}).encode(),
+                                             headers={"User-Agent": "mapa-farmacias (github WD1951)"})
+                dados = json.load(urllib.request.urlopen(req, timeout=240))
+                break
+              except Exception as e:
+                print("falhou", url, e)
+            if dados: break
+            time.sleep(60)
+          if not dados:
+            raise SystemExit("Nenhum servidor respondeu; mantendo o arquivo anterior.")
+          lista = []
+          for el in dados["elements"]:
+            t = el.get("tags", {})
+            lat = el.get("lat") or el.get("center", {}).get("lat")
+            lon = el.get("lon") or el.get("center", {}).get("lon")
+            if lat is None: continue
+            lista.append({
+              "lat": round(lat, 6), "lon": round(lon, 6),
+              "nome": t.get("name") or t.get("brand") or "",
+              "marca": t.get("brand", ""), "operador": t.get("operator", ""),
+              "end": ", ".join(x for x in [t.get("addr:street"), t.get("addr:housenumber")] if x),
+            })
+          saida = {"atualizado": datetime.date.today().isoformat(), "farmacias": lista}
+          json.dump(saida, open("farmacias.json", "w"), ensure_ascii=False, separators=(",", ":"))
+          print(len(lista), "farmácias salvas")
+          PY
+
+      - name: Guardar no repositório
+        run: |
+          git config user.name "robo-farmacias"
+          git config user.email "robo-farmacias@users.noreply.github.com"
+          git add farmacias.json
+          git diff --cached --quiet || (git commit -m "Atualiza farmácias" && git pull --rebase && git push)

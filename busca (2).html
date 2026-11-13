@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Buscar medicamento — Medicamentos Baratos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f3; --painel:#ffffff; --tinta:#16232e; --suave:#5b6a76; --linha:#d5dce1;
+  --verde:#0f8a6b; --aviso:#9a6a0c; --fundo-aviso:#fbf3e2;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#10171d; --painel:#18222a; --tinta:#e6edf1; --suave:#93a3ae; --linha:#2a3742;
+         --verde:#35c39b; --aviso:#e0a83a; --fundo-aviso:#2a2416; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;
+  padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.casca{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.6rem;font-weight:800;margin:0 0 4px}
+.sub{color:var(--suave);font-size:.95rem;margin:0 0 16px}
+form{display:flex;gap:8px}
+input{flex:1;font:inherit;font-size:1.05rem;padding:12px 14px;border-radius:12px;border:1px solid var(--linha);
+  background:var(--painel);color:var(--tinta);min-width:0}
+button{font:inherit;font-size:1rem;font-weight:600;padding:12px 18px;border-radius:12px;border:0;
+  background:var(--tinta);color:var(--painel);cursor:pointer}
+input:focus-visible,button:focus-visible{outline:3px solid var(--verde);outline-offset:2px}
+.exemplos{font-size:.85rem;color:var(--suave);margin:10px 0 0}
+.exemplos a{color:var(--verde);cursor:pointer;text-decoration:underline}
+#estado{margin:18px 0 8px;color:var(--suave)}
+.aviso{background:var(--fundo-aviso);color:var(--tinta);border-left:4px solid var(--aviso);
+  padding:10px 14px;border-radius:8px;font-size:.92rem;margin:10px 0}
+h2{font-size:1.15rem;margin:26px 0 8px;font-weight:800}
+h2 span{color:var(--suave);font-weight:400;font-size:.95rem}
+ol{list-style:none;margin:0;padding:0;background:var(--painel);border:1px solid var(--linha);border-radius:12px;overflow:hidden}
+li{padding:12px 14px;border-bottom:1px solid var(--linha);display:grid;grid-template-columns:1fr auto;gap:4px 14px}
+li:last-child{border-bottom:0}
+.nome{font-weight:600}
+.lab{font-size:.85rem;color:var(--suave)}
+.cmed{font-size:.72rem;color:var(--suave);opacity:.8;margin-top:2px}
+.tipos{font-size:.88rem;color:var(--suave);margin:6px 0 0;line-height:1.45}
+.tipos b{color:var(--tinta)}
+.preco{text-align:right;white-space:nowrap}
+.preco b{display:block;font-size:1.1rem;color:var(--verde)}
+.preco span{font-size:.8rem;color:var(--suave)}
+li.ref{background:var(--bg)}
+.marca{font-size:.75rem;font-weight:600;color:var(--suave)}
+.resto{margin-top:18px;font-size:.92rem;color:var(--suave)}
+.rodape{margin-top:30px;font-size:.8rem;color:var(--suave)}
+</style>
+</head>
+<body>
+<div class="casca">
+  <h1>Qual medicamento você procura?</h1>
+  <p class="sub">Digite o nome e a dose. Mostramos as opções do menor ao maior preço por unidade.</p>
+  <form id="form">
+    <input id="termo" type="search" autocomplete="off" placeholder="Ex.: dipirona 500 comprimido" aria-label="Medicamento">
+    <button>Buscar</button>
+  </form>
+  <p class="exemplos">Exemplos: <a data-t="dipirona 500 comprimido">dipirona 500 comprimido</a>, <a data-t="losartana 50">losartana 50</a></p>
+  <div id="estado">Carregando a tabela de preços…</div>
+  <div id="saida"></div>
+  <p class="rodape" id="rodape"></p>
+</div>
+<script>
+// Como as pessoas falam -> como a tabela da CMED escreve
+const SINONIMOS = {comprimido:"com",comprimidos:"com",comp:"com",capsula:"cap",capsulas:"cap",
+  dragea:"drg",drageas:"drg",gota:"got",gotas:"got",xarope:"xpe",solucao:"sol",suspensao:"sus",
+  injetavel:"inj",injecao:"inj",ampola:"amp",pomada:"pom",creme:"crem",gel:"gel",spray:"spr",
+  efervescente:"efev",sache:"sache"};
+const MESMA_SUBSTANCIA = [
+  [["DIPIRONA SODICA","DIPIRONA MONOIDRATADA"],
+   "Dipirona sódica e dipirona monoidratada são a mesma substância, escrita de dois jeitos na tabela. Pode comparar as duas."]
+];
+const POR_BLOCO = 5, BLOCOS_COMPLETOS = 2, CAIXA_NORMAL = 60;
+const UNID = "mcg|mg|g|ml|ui|meq|%";
+
+const semAcento = t => t.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const numeroDose = p => { const m = semAcento(p).match(new RegExp(`^(\\d+(?:[.,]\\d+)?)(?:${UNID})?$`));
+  return m ? String(parseFloat(m[1].replace(",","."))) : null; };
+
+let ITENS = [];
+function preparar(dados){
+  const c = Object.fromEntries(dados.colunas.map((n,i)=>[n,i]));
+  ITENS = dados.itens.map(l=>{
+    const it = {substancia:l[c.substancia], produto:l[c.produto], apresentacao:l[c.apresentacao],
+      laboratorio:l[c.laboratorio], tipo:l[c.tipo], pmc:l[c.pmc], forma:l[c.forma],
+      unidade:l[c.unidade], pu:l[c.preco_unidade], doses:l[c.doses]||""};
+    it.tokens = semAcento([it.substancia,it.produto,it.apresentacao,it.laboratorio,it.tipo].join(" "))
+      .split(/[^a-z0-9]+/).filter(Boolean);
+    return it;
+  });
+}
+
+function buscar(termo){
+  const palavras = termo.split(/\s+/).filter(Boolean);
+  let numeros = palavras.map(numeroDose).filter(Boolean);
+  let textuais = palavras.filter(p=>!numeroDose(p)).map(semAcento);
+  if (!textuais.length){ textuais = palavras.map(semAcento); numeros = []; }
+  const casaPalavra = (it,p) => { const alt = SINONIMOS[p];
+    return it.tokens.some(t => t.startsWith(p) || (alt && t === alt)); };
+  return ITENS.filter(it => textuais.every(p=>casaPalavra(it,p)) &&
+                            numeros.every(n => it.doses.includes(` ${n} `)));
+}
+
+function agrupar(res){
+  const grupos = {};
+  res.forEach(r => (grupos[r.forma||"outra"] ||= []).push(r));
+  const grande = r => r.pmc && r.pu ? r.pmc/r.pu > CAIXA_NORMAL : false;
+  const ord = (a,b) => (grande(a)-grande(b)) || ((a.pu==null)-(b.pu==null)) ||
+                       ((a.pu||0)-(b.pu||0)) || ((a.pmc??Infinity)-(b.pmc??Infinity));
+  const tipo = (r,p) => semAcento(r.tipo||"").includes(p);
+  const formas = Object.keys(grupos).sort((a,b)=>grupos[b].length-grupos[a].length);
+  const blocos = formas.slice(0,BLOCOS_COMPLETOS).map(f=>{
+    const itens = grupos[f].slice().sort(ord);
+    const refs = itens.filter(r=>tipo(r,"referencia"));
+    const ref = refs[0] || itens.find(r=>tipo(r,"novo")) || null;
+    return {forma:f, total:itens.length, itens:itens.slice(0,POR_BLOCO), ref};
+  });
+  const resto = formas.slice(BLOCOS_COMPLETOS).map(f=>[f,grupos[f].length]);
+  return {blocos, resto};
+}
+
+const reais = (v,casas=2) => "R$ " + v.toLocaleString("pt-BR",{minimumFractionDigits:casas,maximumFractionDigits:casas});
+const titulo = t => t.toLowerCase().replace(/(^|\s)\S/g, s=>s.toUpperCase());
+function el(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+
+const PLURAL = {comprimido:"comprimidos","cápsula":"cápsulas","drágea":"drágeas","sachê":"sachês",
+  ampola:"ampolas",envelope:"envelopes",unidade:"unidades"};
+const TIPOS = {novo:"Original", referencia:"Referência", generico:"Genérico", similar:"Similar"};
+const frase = t => { t = (t||"").toLowerCase().trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
+function rotuloTipo(t){ const k = semAcento(t||""); for (const c in TIPOS) if (k.includes(c)) return TIPOS[c]; return t||""; }
+function dose(apres){
+  const m = (apres||"").toUpperCase().match(/^\s*((?:\d+(?:[.,]\d+)?\s*(?:MCG|MG|G|ML|UI|MEQ|%)(?:\s*\/\s*(?:ML|G|DOSE|GOTA))?\s*\+?\s*)+)/);
+  return m ? m[1].replace(/\s*\+\s*$/,"").replace(/(\d)\s*(MCG|MG|G|ML|UI|MEQ|%)/g,"$1 $2").replace(/\s*\/\s*/g,"/").replace(/\s+\+\s*/g," + ").toLowerCase().trim() : "";
+}
+const ACENTOS = {sodica:"sódica",potassica:"potássica",calcica:"cálcica",magnesica:"magnésica",
+  acido:"ácido",acetilsalicilico:"acetilsalicílico",folico:"fólico",ascorbico:"ascórbico",
+  valproico:"valproico",clavulanico:"clavulânico",fusidico:"fusídico",citrico:"cítrico",
+  sodico:"sódico",potassico:"potássico",calcico:"cálcico",magnesio:"magnésio",zinco:"zinco",
+  ferroso:"ferroso",tartarato:"tartarato",succinato:"succinato",besilato:"besilato"};
+const acentuar = t => t.replace(/[a-zà-ú]+/g, w => ACENTOS[w] || w);
+function empresa(t){
+  const pequenas = ["e","de","da","do","das","dos"];
+  return (t||"").toLowerCase().split(/\s+/).map((w,i)=> i && pequenas.includes(w) ? w :
+    w==="ltda" ? "Ltda" : /^s\.?a\.?$/.test(w) ? "S.A." : w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
+}
+function nomeAmigavel(r){
+  const sub = (r.substancia||"").replace(/\s*;\s*/g," + ");
+  const marca = semAcento(r.produto||""), base = semAcento(sub).split(/[^a-z]+/).filter(w=>w.length>3);
+  const generico = base.length && base.some(w=>marca.includes(w));
+  // No genérico, o nome do produto costuma ser mais completo (ex.: "dipirona sódica").
+  const nome = generico
+    ? frase(acentuar((marca.length >= semAcento(sub).length ? r.produto : sub).toLowerCase()))
+    : `${frase(r.produto)} (${acentuar(sub.toLowerCase())})`;
+  const d = dose(r.apresentacao);
+  return d ? `${nome} ${d}` : nome;
+}
+function embalagem(r){
+  if (!r.pmc || !r.pu) return "";
+  const q = Math.round(r.pmc / r.pu);
+  if (r.unidade === "ml") return `frasco de ${q} ml`;
+  if (r.unidade === "g") return `embalagem de ${q} g`;
+  return `caixa com ${q} ${q === 1 ? r.unidade : (PLURAL[r.unidade] || r.unidade)}`;
+}
+
+function item(r, marca){
+  const li = el("li", marca ? "ref" : "");
+  const esq = el("div");
+  if (marca) esq.append(el("div","marca",marca));
+  esq.append(el("div","nome", nomeAmigavel(r)));
+  const emb = embalagem(r);
+  esq.append(el("div","lab", [emb, rotuloTipo(r.tipo), empresa(r.laboratorio)].filter(Boolean).join(" · ")));
+  esq.append(el("div","cmed", `${r.produto} ${r.apresentacao}`.replace(/\s+/g," ")));
+  const dir = el("div","preco");
+  if (r.pu){ dir.append(el("b",null, reais(r.pu, r.pu<1?3:2))); dir.append(el("span",null,`por ${r.unidade}`));
+    dir.append(el("span",null,` · embalagem até ${reais(r.pmc)}`)); }
+  else if (r.pmc){ dir.append(el("b",null, reais(r.pmc))); dir.append(el("span",null,"a embalagem")); }
+  else dir.append(el("span",null,"sem preço máximo na tabela"));
+  li.append(esq, dir);
+  return li;
+}
+
+function mostrar(termo){
+  const saida = document.getElementById("saida"); saida.innerHTML = "";
+  const t = termo.trim(); if(!t) return;
+  const res = buscar(t);
+  const estado = document.getElementById("estado");
+  if (!res.length){ estado.textContent = `Nada encontrado para “${t}”. Confira a grafia ou tire a dose.`; return; }
+  estado.textContent = `${res.length} apresentações para “${t}”.`;
+  saida.append(el("div","aviso","Valores = preço máximo permitido por lei (tabela CMED, São Paulo). Na farmácia o preço costuma ser menor."));
+  const nomes = res.map(r=>semAcento(r.substancia+" "+r.produto).toUpperCase()).join(" ");
+  MESMA_SUBSTANCIA.forEach(([grafias,nota])=>{ if(grafias.filter(g=>nomes.includes(g)).length>=2) saida.append(el("div","aviso",nota)); });
+  const tipos = el("p","tipos");
+  tipos.innerHTML = "<b>Original</b>: o primeiro registrado, de marca. <b>Genérico</b>: mesma substância e dose, aprovado pela Anvisa para substituir o original. <b>Similar</b>: mesma substância, com marca própria; para trocar pelo original, peça orientação ao farmacêutico.";
+  saida.append(tipos);
+  const {blocos, resto} = agrupar(res);
+  blocos.forEach(b=>{
+    const h = el("h2",null, titulo(b.forma)+" "); h.append(el("span",null,`${b.total} opções`)); saida.append(h);
+    const ol = el("ol"); b.itens.forEach(r=>ol.append(item(r)));
+    if (b.ref && !b.itens.includes(b.ref)) ol.append(item(b.ref, rotuloTipo(b.ref.tipo)==="Original" ? "Original de marca" : "Medicamento de referência"));
+    saida.append(ol);
+  });
+  if (resto.length){
+    saida.append(el("p","resto", "Também existe em: " + resto.map(([f,q])=>`${f} (${q})`).join(", ") +
+      `. Para ver, busque por exemplo “${t} ${resto[0][0]}”.`));
+  }
+}
+
+document.getElementById("form").onsubmit = e => { e.preventDefault(); mostrar(document.getElementById("termo").value); };
+document.querySelectorAll(".exemplos a").forEach(a=>a.onclick=()=>{ document.getElementById("termo").value=a.dataset.t; mostrar(a.dataset.t); });
+
+fetch("precos.json",{cache:"no-cache"}).then(r=>{ if(!r.ok) throw 0; return r.json(); }).then(d=>{
+  preparar(d);
+  const [a,m,dia] = d.atualizado.split("-");
+  document.getElementById("estado").textContent = "Pronto. Digite o medicamento.";
+  document.getElementById("rodape").textContent = `Tabela CMED da Anvisa, atualizada em ${dia}/${m}/${a}. ${ITENS.length.toLocaleString("pt-BR")} apresentações à venda.`;
+}).catch(()=>{ document.getElementById("estado").textContent = "A tabela ainda não foi gerada. Rode o robô CMED na aba Actions do GitHub."; });
+</script>
+</body>
+</html>

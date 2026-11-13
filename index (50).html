@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Medicamentos Baratos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f3; --painel:#ffffff; --tinta:#16232e; --suave:#5b6a76; --linha:#d5dce1; --verde:#0f8a6b;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#10171d; --painel:#18222a; --tinta:#e6edf1; --suave:#93a3ae; --linha:#2a3742; --verde:#35c39b; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;
+  padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.casca{max-width:640px;margin:0 auto;padding:32px 18px 40px}
+.marca{font-weight:800;font-size:1rem;color:var(--verde);margin:0 0 28px}
+h1{font-size:2rem;line-height:1.15;font-weight:800;margin:0 0 14px}
+form{display:flex;gap:8px}
+input{flex:1;min-width:0;font:inherit;font-size:1.1rem;padding:14px 16px;border-radius:12px;border:1px solid var(--linha);
+  background:var(--painel);color:var(--tinta)}
+button{font:inherit;font-size:1.05rem;font-weight:600;padding:14px 20px;border-radius:12px;border:0;
+  background:var(--tinta);color:var(--painel);cursor:pointer}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--verde);outline-offset:2px}
+.ou{margin:34px 0 12px;font-weight:600;color:var(--suave)}
+.caminhos{display:grid;gap:10px}
+.caminhos a{display:block;text-decoration:none;color:var(--tinta);background:var(--painel);
+  border:1px solid var(--linha);border-radius:12px;padding:16px 18px}
+.caminhos a:hover{border-color:var(--verde)}
+.caminhos b{display:block;font-size:1.1rem;margin-bottom:3px}
+.caminhos span{color:var(--suave);font-size:.92rem}
+.rodape{margin-top:36px;font-size:.85rem;color:var(--suave);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="casca">
+  <p class="marca">Medicamentos Baratos</p>
+  <h1>Qual medicamento você procura?</h1>
+  <form action="busca.html">
+    <input name="q" type="search" autocomplete="off" placeholder="Ex.: dipirona 500 comprimido" aria-label="Medicamento" required>
+    <button>Buscar</button>
+  </form>
+
+  <p class="ou">Ou encontre uma farmácia</p>
+  <div class="caminhos">
+    <a href="mapa.html"><b>Perto de mim</b><span>Farmácias ao redor de um ponto, independentes e de rede.</span></a>
+    <a href="caminho.html"><b>No meu caminho</b><span>Informe para onde vai e veja quanto tempo cada farmácia acrescenta ao trajeto.</span></a>
+  </div>
+
+  <p class="rodape">Não vendemos medicamentos. Mostramos preços e farmácias para você escolher onde comprar, em rede ou independente.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>No meu caminho — Medicamentos Baratos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#eef1f3; --painel:#ffffff; --tinta:#16232e; --suave:#5b6a76; --linha:#d5dce1;
+  --indep:#0f8a6b; --rede:#8b97a1; --rota:#1d5fd1; --aviso:#c98a12;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#10171d; --painel:#18222a; --tinta:#e6edf1; --suave:#93a3ae; --linha:#2a3742;
+         --indep:#35c39b; --rede:#6d7c87; --rota:#6fa0ff; --aviso:#e0a83a; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;
+  display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+header{padding:12px 16px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--linha);background:var(--painel)}
+h1{font-size:1.3rem;font-weight:800;margin:0}
+.linha{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,input{font:inherit;font-size:.95rem;padding:8px 12px;border-radius:10px;border:1px solid var(--linha);
+  background:var(--painel);color:var(--tinta)}
+button{cursor:pointer}
+input{flex:1;min-width:180px}
+button.forte{background:var(--tinta);color:var(--painel);border-color:var(--tinta);font-weight:600}
+.modo button[aria-pressed="true"],.filtro button[aria-pressed="true"]{background:var(--tinta);color:var(--painel);border-color:var(--tinta)}
+.rotulo{font-size:.85rem;color:var(--suave);min-width:62px}
+.ponto{font-size:.88rem;color:var(--suave)}
+main{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0}
+#mapa{min-height:300px}
+aside{background:var(--painel);border-left:1px solid var(--linha);display:flex;flex-direction:column;min-height:0}
+#estado{padding:10px 14px;font-size:.9rem;color:var(--suave);border-bottom:1px solid var(--linha)}
+.filtro{padding:8px 14px;border-bottom:1px solid var(--linha);display:flex;gap:6px}
+.filtro button{padding:6px 10px;font-size:.85rem;border-radius:999px}
+ul{list-style:none;margin:0;padding:0;overflow:auto;flex:1;padding-bottom:env(safe-area-inset-bottom,0px)}
+li{padding:11px 14px;border-bottom:1px solid var(--linha);display:grid;grid-template-columns:12px 1fr auto;gap:10px;cursor:pointer}
+li:hover{background:var(--bg)}
+.pt{width:10px;height:10px;border-radius:50%;margin-top:6px}
+.nome{font-weight:600;font-size:.95rem}
+.end{font-size:.8rem;color:var(--suave)}
+.aprox{font-size:.75rem;color:var(--aviso)}
+.desvio{text-align:right;white-space:nowrap}
+.desvio b{display:block;font-size:1.05rem}
+.desvio span{font-size:.75rem;color:var(--suave)}
+.ir{margin-top:6px;font-size:.8rem;padding:5px 9px}
+.dica{font-size:.8rem;color:var(--suave);padding:8px 14px;border-top:1px solid var(--linha)}
+@media (max-width:760px){
+  main{grid-template-columns:1fr;grid-template-rows:50vh auto}
+  aside{border-left:0;border-top:1px solid var(--linha)}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>No meu caminho</h1>
+  <div class="linha">
+    <span class="rotulo">Saída</span>
+    <button id="btnLocal">Usar minha localização</button>
+    <span class="ponto" id="txtOrigem">ou toque no mapa</span>
+  </div>
+  <div class="linha">
+    <span class="rotulo">Destino</span>
+    <input id="campoDestino" placeholder="Endereço de destino, ex.: Rua Tuiuti, 500">
+    <button id="btnBuscar">Buscar</button>
+  </div>
+  <div class="linha">
+    <span class="rotulo">Como vai</span>
+    <span class="modo linha">
+      <button data-m="foot" aria-pressed="true">A pé</button>
+      <button data-m="car" aria-pressed="false">Carro</button>
+    </span>
+    <button class="forte" id="btnTracar">Ver farmácias no caminho</button>
+  </div>
+</header>
+<main>
+  <div id="mapa"></div>
+  <aside>
+    <div id="estado">Defina a saída e o destino.</div>
+    <div class="filtro">
+      <button data-f="todas" aria-pressed="true">Todas</button>
+      <button data-f="indep" aria-pressed="false">Independentes</button>
+      <button data-f="rede" aria-pressed="false">Redes</button>
+    </div>
+    <ul id="lista"></ul>
+    <div class="dica">O desvio é só o tempo a mais de deslocamento; o atendimento na loja fica à parte. Preço e horário entram quando as farmácias informarem. Rotas: OpenStreetMap.</div>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const SERVIDOR = { foot:"https://routing.openstreetmap.de/routed-foot", car:"https://routing.openstreetmap.de/routed-car" };
+const FAIXA = { foot:400, car:800 };     // distância máxima da rota, em metros
+const MAX_CANDIDATAS = 60;
+const OUTROS = /hospital|maternidade|santa casa|\bextra\b(?!farma)|carrefour|p[aã]o de a[cç][uú]car|assa[ií]|atacad[aã]o|\bdia\b|sonda|st marche|mambo|hirota/;
+
+let origem=null, destino=null, modo="foot", filtro="todas", resultados=[];
+const mapa = L.map("mapa").setView([-23.5668,-46.6530], 14);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(mapa);
+const camada = L.layerGroup().addTo(mapa);
+let mOrigem, mDestino, linhaRota;
+const cor = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const $ = id => document.getElementById(id);
+const estado = t => $("estado").textContent = t;
+
+// ---------- pontos de saída e destino ----------
+function marcar(qual, pos, texto){
+  if (qual==="o"){ origem=pos; if(mOrigem) mapa.removeLayer(mOrigem);
+    mOrigem=L.circleMarker(pos,{radius:8,color:cor("--tinta"),fillColor:cor("--tinta"),fillOpacity:1}).addTo(mapa).bindTooltip("Saída");
+    $("txtOrigem").textContent = texto || "Ponto marcado no mapa"; }
+  else { destino=pos; if(mDestino) mapa.removeLayer(mDestino);
+    mDestino=L.marker(pos).addTo(mapa).bindTooltip("Destino");
+    if (texto) $("campoDestino").value = texto; }
+}
+mapa.on("click", e=>{
+  const p=[e.latlng.lat,e.latlng.lng];
+  if(!origem) marcar("o",p); else { marcar("d",p,"Ponto marcado no mapa"); }
+});
+$("btnLocal").onclick = ()=>{
+  if(!navigator.geolocation){ estado("Este aparelho não informa a localização."); return; }
+  estado("Pedindo sua localização…");
+  navigator.geolocation.getCurrentPosition(
+    p=>{ const pos=[p.coords.latitude,p.coords.longitude]; marcar("o",pos,"Sua localização"); mapa.setView(pos,15); estado("Saída definida. Agora o destino."); },
+    ()=> estado("Localização não autorizada. Toque no mapa para marcar a saída."), {enableHighAccuracy:true,timeout:10000});
+};
+async function buscarDestino(){
+  const q=$("campoDestino").value.trim(); if(!q) return;
+  estado("Procurando o endereço…");
+  try{
+    const r=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&viewbox=-47.0,-23.2,-46.3,-24.0&q="+encodeURIComponent(q+", São Paulo"));
+    const j=await r.json();
+    if(!j.length){ estado("Endereço não encontrado. Tente com número e bairro, ou toque no mapa."); return; }
+    const pos=[+j[0].lat,+j[0].lon]; marcar("d",pos); mapa.setView(pos,15); estado("Destino definido.");
+  }catch(e){ estado("Falha na busca de endereço. Toque no mapa para marcar o destino."); }
+}
+$("btnBuscar").onclick=buscarDestino;
+$("campoDestino").onkeydown=e=>{ if(e.key==="Enter") buscarDestino(); };
+document.querySelectorAll(".modo button").forEach(b=> b.onclick=()=>{
+  document.querySelectorAll(".modo button").forEach(x=>x.setAttribute("aria-pressed","false"));
+  b.setAttribute("aria-pressed","true"); modo=b.dataset.m; });
+document.querySelectorAll(".filtro button").forEach(b=> b.onclick=()=>{
+  document.querySelectorAll(".filtro button").forEach(x=>x.setAttribute("aria-pressed","false"));
+  b.setAttribute("aria-pressed","true"); filtro=b.dataset.f; desenharLista(); });
+
+// ---------- farmácias ----------
+let BASE=null;
+async function farmacias(){
+  if(BASE) return BASE;
+  const r=await fetch("farmacias_receita.json",{cache:"no-cache"});
+  const j=await r.json();
+  BASE=j.farmacias.filter(f=>f.tipo==="drogaria" && !OUTROS.test((f.nome||"").toLowerCase()))
+    .map(f=>({pos:[f.lat,f.lon], nome:f.nome||"Farmácia sem nome",
+      end:[f.end,f.bairro].filter(Boolean).join(" · "), t:f.rede?"rede":"indep",
+      aprox:f.precisao==="rua"||f.precisao==="cep"}));
+  return BASE;
+}
+
+// distância (m) de um ponto à linha da rota, em plano local
+function distRota(p, linha){
+  const k=111320, c=Math.cos(p[0]*Math.PI/180);
+  const xy=q=>[(q[1]-p[1])*k*c,(q[0]-p[0])*k];
+  let min=Infinity;
+  for(let i=1;i<linha.length;i++){
+    const [ax,ay]=xy(linha[i-1]), [bx,by]=xy(linha[i]);
+    const dx=bx-ax, dy=by-ay, l=dx*dx+dy*dy;
+    let t=l? -(ax*dx+ay*dy)/l : 0; t=Math.max(0,Math.min(1,t));
+    const d=Math.hypot(ax+t*dx, ay+t*dy); if(d<min) min=d;
+  }
+  return min;
+}
+const coord = p => `${p[1].toFixed(6)},${p[0].toFixed(6)}`;
+
+$("btnTracar").onclick = async ()=>{
+  if(!origem||!destino){ estado("Falta a saída ou o destino."); return; }
+  camada.clearLayers(); if(linhaRota) mapa.removeLayer(linhaRota); $("lista").innerHTML="";
+  estado("Traçando a rota…");
+  try{
+    const srv=SERVIDOR[modo];
+    const r=await (await fetch(`${srv}/route/v1/driving/${coord(origem)};${coord(destino)}?overview=full&geometries=geojson`)).json();
+    if(r.code!=="Ok") throw 0;
+    const linha=r.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+    const base=r.routes[0].duration;
+    linhaRota=L.polyline(linha,{color:cor("--rota"),weight:5,opacity:.8}).addTo(mapa);
+    mapa.fitBounds(linhaRota.getBounds(),{padding:[30,30]});
+
+    estado("Procurando farmácias ao longo da rota…");
+    const todas=await farmacias();
+    const cand=todas.map(f=>({...f,dr:distRota(f.pos,linha)}))
+      .filter(f=>f.dr<=FAIXA[modo]).sort((a,b)=>a.dr-b.dr).slice(0,MAX_CANDIDATAS);
+    if(!cand.length){ estado("Nenhuma farmácia cadastrada perto desta rota."); return; }
+
+    estado(`Calculando o desvio de ${cand.length} farmácias…`);
+    const lista=cand.map(f=>coord(f.pos)).join(";");
+    const n=cand.length, idx=[...Array(n).keys()].map(i=>i+1).join(";");
+    const ida=await (await fetch(`${srv}/table/v1/driving/${coord(origem)};${lista}?sources=0&destinations=${idx}`)).json();
+    const volta=await (await fetch(`${srv}/table/v1/driving/${lista};${coord(destino)}?sources=${[...Array(n).keys()].join(";")}&destinations=${n}`)).json();
+    if(ida.code!=="Ok"||volta.code!=="Ok") throw 0;
+    resultados=cand.map((f,i)=>{
+      const a=ida.durations[0][i], b=volta.durations[i][0];
+      return (a==null||b==null)? null : {...f, extra:Math.max(0,a+b-base)};
+    }).filter(Boolean).sort((x,y)=>x.extra-y.extra);
+    estado(`Rota de ${Math.round(base/60)} min. ${resultados.length} farmácias, do menor ao maior desvio.`);
+    desenharLista();
+  }catch(e){ estado("O serviço de rotas não respondeu. Tente de novo em instantes."); }
+};
+
+function textoDesvio(s){ const m=Math.round(s/60); return m<1? "no caminho" : `+${m} min`; }
+function linkIr(f){
+  const tm = modo==="foot" ? "walking" : "driving";
+  return `https://www.google.com/maps/dir/?api=1&origin=${origem.join(",")}&destination=${destino.join(",")}&waypoints=${f.pos.join(",")}&travelmode=${tm}`;
+}
+function desenharLista(){
+  camada.clearLayers();
+  const ul=$("lista"); ul.innerHTML="";
+  resultados.filter(f=>filtro==="todas"||f.t===filtro).forEach(f=>{
+    const c=cor(f.t==="indep"?"--indep":"--rede");
+    const m=L.circleMarker(f.pos,{radius:f.t==="indep"?8:6,color:c,fillColor:c,fillOpacity:f.aprox?.15:.9,weight:f.aprox?2:1}).addTo(camada);
+    const pop=document.createElement("div"); pop.innerHTML="<b></b><br><span></span>";
+    pop.querySelector("b").textContent=f.nome; pop.querySelector("span").textContent=`${textoDesvio(f.extra)} · ${f.t==="indep"?"independente":"rede"}`;
+    m.bindPopup(pop);
+    const li=document.createElement("li");
+    li.innerHTML=`<span class="pt" style="${f.aprox?`border:2px solid ${c}`:`background:${c}`}"></span>
+      <div><div class="nome"></div><div class="end"></div>${f.aprox?'<div class="aprox">Local aproximado</div>':''}
+      <a class="ir" target="_blank" rel="noopener"><button class="ir">Como chegar</button></a></div>
+      <div class="desvio"><b>${textoDesvio(f.extra)}</b><span>${f.t==="indep"?"independente":"rede"}</span></div>`;
+    li.querySelector(".nome").textContent=f.nome;
+    li.querySelector(".end").textContent=f.end||"Endereço não informado";
+    li.querySelector("a").href=linkIr(f);
+    li.querySelector("a").onclick=e=>e.stopPropagation();
+    li.onclick=()=>{ mapa.setView(f.pos,17); m.openPopup(); };
+    ul.appendChild(li);
+  });
+}
+</script>
+</body>
+</html>

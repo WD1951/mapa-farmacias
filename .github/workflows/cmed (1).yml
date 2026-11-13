@@ -1,0 +1,30 @@
+name: Atualizar CMED
+
+on:
+  schedule:
+    - cron: "0 10 5 * *"   # todo dia 5, 7h da manhã de Brasília
+  workflow_dispatch:       # botão para rodar na hora
+
+permissions:
+  contents: write
+
+jobs:
+  cmed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Baixar a tabela CMED e gerar precos.json
+        run: python cmed_publico.py
+
+      - name: Guardar no repositório
+        run: |
+          git config user.name "robo-cmed"
+          git config user.email "robo-cmed@users.noreply.github.com"
+          git add precos.json
+          git commit -m "CMED atualizada" || echo "Sem mudanças na CMED"
+          git pull --rebase
+          git push

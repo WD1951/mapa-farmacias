@@ -1,0 +1,34 @@
+name: Preços das redes
+
+on:
+  schedule:
+    - cron: "0 10 * * *"   # todo dia, 7h da manhã de Brasília
+  workflow_dispatch:       # botão para rodar na hora
+
+permissions:
+  contents: write
+
+jobs:
+  redes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Ler os preços nos sites das redes
+        shell: bash
+        run: |
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          python redes_precos.py | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar no repositório
+        run: |
+          git config user.name "robo-redes"
+          git config user.email "robo-redes@users.noreply.github.com"
+          git add precos_redes.json
+          git commit -m "Preços das redes atualizados" || echo "Sem mudanças"
+          git pull --rebase
+          git push

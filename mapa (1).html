@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa de farmácias — Medicamentos Baratos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#eef1f3; --painel:#ffffff; --tinta:#16232e; --suave:#5b6a76; --linha:#d5dce1;
+  --indep:#0f8a6b; --rede:#8b97a1; --outro:#c98a12; --manip:#7b5cc4; --raio:#16232e;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#10171d; --painel:#18222a; --tinta:#e6edf1; --suave:#93a3ae; --linha:#2a3742;
+         --indep:#35c39b; --rede:#6d7c87; --outro:#e0a83a; --manip:#a48be6; --raio:#e6edf1; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;
+  display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+header{padding:14px 18px 10px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+.volta{color:var(--indep);font-size:.9rem;display:inline-block;margin-bottom:4px}
+h1{font-size:1.35rem;font-weight:800;margin:0;letter-spacing:-.01em}
+.sub{color:var(--suave);font-size:.9rem;margin-top:2px}
+.raios{display:flex;gap:6px}
+.raios button{font:inherit;font-size:.95rem;padding:8px 14px;border-radius:999px;border:1px solid var(--linha);
+  background:var(--painel);color:var(--tinta);cursor:pointer}
+.raios button[aria-pressed="true"]{background:var(--tinta);color:var(--painel);border-color:var(--tinta)}
+main{flex:1;display:grid;grid-template-columns:1fr 340px;min-height:0}
+#mapa{min-height:300px}
+aside{background:var(--painel);border-left:1px solid var(--linha);display:flex;flex-direction:column;min-height:0}
+.contas{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--linha)}
+.conta{padding:14px 12px}
+.conta b{display:block;font-size:1.8rem;font-weight:800;line-height:1}
+.conta span{font-size:.82rem;color:var(--suave)}
+.conta.i b{color:var(--indep)}
+.fora{padding:8px 14px;font-size:.85rem;color:var(--suave);border-bottom:1px solid var(--linha);display:flex;gap:14px;flex-wrap:wrap}
+.fora i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+#estado{padding:10px 14px;font-size:.88rem;color:var(--suave);border-bottom:1px solid var(--linha)}
+ul{list-style:none;margin:0;padding:0;overflow:auto;flex:1;padding-bottom:env(safe-area-inset-bottom,0px)}
+li{padding:10px 14px;border-bottom:1px solid var(--linha);cursor:pointer;display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:start}
+li:hover,li:focus{background:var(--bg);outline:none}
+.pt{width:10px;height:10px;border-radius:50%;margin-top:5px}
+.nome{font-weight:600;font-size:.95rem}
+.end{font-size:.8rem;color:var(--suave)}
+.dist{font-size:.85rem;color:var(--suave);white-space:nowrap}
+.aprox{font-size:.75rem;color:var(--outro);margin-top:2px}
+.dica{font-size:.8rem;color:var(--suave);padding:8px 14px}
+@media (max-width:760px){
+  main{grid-template-columns:1fr;grid-template-rows:55vh auto}
+  aside{border-left:0;border-top:1px solid var(--linha)}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <a class="volta" href="./">← Início</a>
+    <h1>Farmácias ao redor</h1>
+    <div class="sub">Toque no mapa para mudar o centro. <span id="fonte">Carregando dados…</span></div>
+  </div>
+  <div class="raios" role="group" aria-label="Raio">
+    <button data-r="500">500 m</button>
+    <button data-r="1000" aria-pressed="true">1 km</button>
+    <button data-r="2000">2 km</button>
+  </div>
+</header>
+<main>
+  <div id="mapa"></div>
+  <aside>
+    <div class="contas">
+      <div class="conta i"><b id="cIndep">–</b><span>independentes</span></div>
+      <div class="conta"><b id="cRede">–</b><span>de rede</span></div>
+      <div class="conta"><b id="cTotal">–</b><span>concorrentes</span></div>
+    </div>
+    <div class="fora">Fora da conta:
+      <span><i style="background:var(--manip)"></i><b id="cManip">–</b> manipulação</span>
+      <span><i style="background:var(--outro)"></i><b id="cOutro">–</b> hospital ou mercado</span>
+    </div>
+    <div id="estado">Carregando…</div>
+    <ul id="lista"></ul>
+    <div class="dica"><span id="regra"></span> Manipulação, hospital e mercado ficam fora da conta. <span id="data"></span></div>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ---- regras comuns de nomes ----
+const REDES_NOMES = ["drogasil","droga raia","raia drogasil","drogaria sao paulo","pacheco","pague menos","ultrafarma",
+  "onofre","panvel","extrafarma","nissei","venancio","araujo","drogal","poupafarma","drogaria iguatemi","farmais",
+  "droga leste","promofarma"];
+const ENCERRADA = /\bfalid|liquidac|encerrad/;
+const semAc = t => (t||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const eRedePorNome = n => REDES_NOMES.some(r => semAc(n).includes(r));
+function nomeBonito(t){
+  let s = (t||"").replace(/\s*-\s*(massa falida|falida)\b.*$/i,"")
+    .replace(/\b(ltda|eireli|epp|me|s\.?\/?a)\.?\s*$/i,"").replace(/[\s\-–,.]+$/,"").trim();
+  const pequenas = ["e","de","da","do","das","dos"];
+  const AC = {farmacia:"farmácia",farmacias:"farmácias",sao:"são",comercio:"comércio",saude:"saúde",
+    servicos:"serviços",manipulacao:"manipulação",drogaria:"drogaria",popular:"popular",medicamentos:"medicamentos",
+    sebastiao:"sebastião",joao:"joão",jose:"josé",antonio:"antônio",conceicao:"conceição",pharmacia:"pharmacia"};
+  return s.toLowerCase().split(/\s+/).map(w=>AC[w]||w).map((w,i)=> i && pequenas.includes(w) ? w : w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
+}
+function limpar(lista){            // tira encerradas e repetidas no mesmo endereço
+  const vistos = new Set();
+  return lista.filter(f=>{
+    if (ENCERRADA.test(semAc(f.nome))) return false;
+    const k = semAc(f.end||"") ? semAc(f.end)+"|"+semAc(f.bairro||"") : f.lat.toFixed(5)+","+f.lon.toFixed(5);
+    if (vistos.has(k) && f.end) return false;
+    vistos.add(k); return true;
+  });
+}
+
+// Centro inicial: Alameda Santos, Jardins
+let centro = [-23.5668, -46.6530];
+let raio = 1000;
+
+const REDES = ["drogasil","droga raia","raia","drogaria são paulo","drogaria sao paulo","pacheco",
+  "pague menos","ultrafarma","onofre","panvel","extrafarma","drogarias dsp","farmais","drogaria iguatemi",
+  "nissei","venancio","araujo","drogal","farmácias app","poupafarma"];
+
+const OUTROS = /hospital|maternidade|mater dei|santa casa|\bhosp\b|\bextra\b(?!farma)|carrefour|p[aã]o de a[cç][uú]car|assa[ií]|atacad[aã]o|\bdia\b|sonda|st marche|mambo|hirota/;
+
+function tipo(f){
+  if (f.tipo){                       // base da Receita
+    if (f.tipo !== "drogaria") return "manip";
+    if (OUTROS.test(f.nome.toLowerCase())) return "outro";
+    return (f.rede || eRedePorNome(f.nome)) ? "rede" : "indep";
+  }
+  const s = (f.marca+" "+f.nome+" "+f.operador).toLowerCase();
+  if (/manipula/.test(s)) return "manip";
+  if (OUTROS.test(s)) return "outro";
+  if (REDES.some(r => s.includes(r))) return "rede";
+  return "indep";
+}
+
+const escuro = matchMedia("(prefers-color-scheme: dark)").matches;
+const mapa = L.map("mapa",{zoomControl:true}).setView(centro, 15);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  maxZoom:19, attribution:'&copy; OpenStreetMap'
+}).addTo(mapa);
+
+const camada = L.layerGroup().addTo(mapa);
+let circulo, alvo;
+const cor = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+let BASE = null;
+async function carregar(){
+  if (BASE) return BASE;
+  let r = await fetch("farmacias_receita.json", {cache:"no-cache"});
+  const receita = r.ok;
+  if (!receita) r = await fetch("farmacias.json", {cache:"no-cache"});
+  if (!r.ok) throw new Error("sem arquivo");
+  BASE = await r.json();
+  document.getElementById("fonte").textContent = receita
+    ? "Dados: Receita Federal (farmácias ativas), localizadas pelo OpenStreetMap."
+    : "Dados: OpenStreetMap.";
+  document.getElementById("regra").textContent = receita
+    ? "Rede = empresa com 5 ou mais lojas na cidade. Ponto vazado = localização aproximada."
+    : "Rede = nome de rede grande.";
+  const [a,m,d] = BASE.atualizado.split("-");
+  document.getElementById("data").textContent = `Dados de ${d}/${m}/${a}.`;
+  return BASE;
+}
+
+function distancia(a,b){
+  const R=6371000, rad=x=>x*Math.PI/180;
+  const dLat=rad(b[0]-a[0]), dLon=rad(b[1]-a[1]);
+  const h=Math.sin(dLat/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+
+async function atualizar(){
+  camada.clearLayers();
+  if(circulo) mapa.removeLayer(circulo);
+  if(alvo) mapa.removeLayer(alvo);
+  circulo = L.circle(centro,{radius:raio,color:cor("--raio"),weight:1,fillOpacity:.04,dashArray:"4 4"}).addTo(mapa);
+  alvo = L.circleMarker(centro,{radius:5,color:cor("--raio"),fillColor:cor("--raio"),fillOpacity:1}).addTo(mapa);
+  mapa.fitBounds(circulo.getBounds(),{padding:[10,10]});
+
+  let base;
+  try{ base = await carregar(); }
+  catch(e){ document.getElementById("estado").textContent = "O arquivo de farmácias ainda não existe. Rode o robô na aba Actions do GitHub."; return; }
+
+  const pts = limpar(base.farmacias).map(f=>{
+    const pos = [f.lat,f.lon];
+    const end = [f.end, f.bairro].filter(Boolean).join(" · ");
+    return {pos, nome:f.nome?nomeBonito(f.nome):"Farmácia sem nome", end, t:tipo(f), d:distancia(centro,pos),
+            aprox: f.precisao==="rua"||f.precisao==="cep", prec:f.precisao};
+  }).filter(p=>p.d<=raio).sort((a,b)=>a.d-b.d);
+  const metros = p => p.aprox ? `≈ ${Math.max(100, Math.round(p.d/100)*100)} m` : `${Math.round(p.d)} m`;
+  const AVISO = {rua:"Local aproximado, pela rua", cep:"Local aproximado, pelo CEP"};
+
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  const N={indep:0,rede:0,outro:0,manip:0};
+  const COR={indep:"--indep",rede:"--rede",outro:"--outro",manip:"--manip"};
+  const NOME={indep:"independente",rede:"rede",outro:"hospital ou mercado",manip:"manipulação"};
+  pts.forEach(p=>{
+    N[p.t]++;
+    const c = cor(COR[p.t]);
+    const m = L.circleMarker(p.pos,{radius:p.t==="indep"?8:6,color:c,fillColor:c,
+      fillOpacity:p.aprox?.15:.85,weight:p.aprox?2:1}).addTo(camada);
+    const pop = document.createElement("div");
+    pop.innerHTML = "<b></b><br><span></span><br>";
+    pop.querySelector("b").textContent = p.nome;
+    pop.querySelector("span").textContent = p.end || "Endereço não informado";
+    pop.append(`${metros(p)} · ${NOME[p.t]}`);
+    if (p.aprox){ const a=document.createElement("div"); a.style.fontSize=".8em";
+      a.textContent = AVISO[p.prec] + ".";
+      pop.append(a); }
+    m.bindPopup(pop);
+    const li = document.createElement("li");
+    li.tabIndex = 0;
+    const bolinha = p.aprox ? `border:2px solid ${c};background:transparent` : `background:${c}`;
+    li.innerHTML = `<span class="pt" style="${bolinha}"></span>
+      <div><div class="nome"></div><div class="end"></div>${p.aprox?'<div class="aprox"></div>':''}</div><span class="dist">${metros(p)}</span>`;
+    if (p.aprox) li.querySelector(".aprox").textContent = AVISO[p.prec];
+    li.querySelector(".nome").textContent = p.nome;
+    li.querySelector(".end").textContent = p.end || "Endereço não informado";
+    li.onclick = ()=>{ mapa.setView(p.pos,17); m.openPopup(); };
+    li.onkeydown = e=>{ if(e.key==="Enter") li.onclick(); };
+    lista.appendChild(li);
+  });
+  document.getElementById("cIndep").textContent = N.indep;
+  document.getElementById("cRede").textContent = N.rede;
+  document.getElementById("cOutro").textContent = N.outro;
+  document.getElementById("cManip").textContent = N.manip;
+  document.getElementById("cTotal").textContent = N.indep + N.rede;
+  document.getElementById("estado").textContent = pts.length
+    ? `${pts.length} farmácias em ${raio>=1000?raio/1000+" km":raio+" m"}, da mais próxima à mais distante.`
+    : "Nenhuma farmácia cadastrada neste raio.";
+}
+
+document.querySelectorAll(".raios button").forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll(".raios button").forEach(x=>x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+    raio = +b.dataset.r;
+    atualizar();
+  };
+});
+mapa.on("click", e=>{ centro=[e.latlng.lat,e.latlng.lng]; atualizar(); });
+
+atualizar();
+</script>
+</body>
+</html>

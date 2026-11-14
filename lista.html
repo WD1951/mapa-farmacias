@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Lista de preços da farmácia — Medicamentos Baratos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{ --bg:#eef1f3; --painel:#fff; --tinta:#16232e; --suave:#5b6a76; --linha:#d5dce1; --verde:#0f8a6b; --aviso:#b3261e; color-scheme:light; }
+@media (prefers-color-scheme:dark){ :root{ --bg:#10171d; --painel:#18222a; --tinta:#e6edf1; --suave:#93a3ae; --linha:#2a3742; --verde:#35c39b; --aviso:#ff8a80; color-scheme:dark; } }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.casca{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+.marca{font-weight:800;color:var(--verde);margin:0 0 14px}
+h1{font-size:1.5rem;font-weight:800;margin:0 0 6px}
+.sub{color:var(--suave);font-size:.95rem;margin:0 0 18px;line-height:1.45}
+label{display:block;font-size:.85rem;color:var(--suave);margin:0 0 4px}
+input{font:inherit;font-size:1rem;width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--linha);background:var(--painel);color:var(--tinta)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--verde);outline-offset:2px}
+.dados{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+@media (max-width:480px){.dados{grid-template-columns:1fr}}
+ol{list-style:none;margin:0;padding:0;display:grid;gap:10px;counter-reset:n}
+li{background:var(--painel);border:1px solid var(--linha);border-radius:12px;padding:10px 12px;counter-increment:n;position:relative}
+li::before{content:counter(n);position:absolute;left:-6px;top:-6px;background:var(--tinta);color:var(--painel);font-size:.75rem;font-weight:700;border-radius:999px;width:20px;height:20px;display:grid;place-items:center}
+.linha{display:grid;grid-template-columns:1fr 110px;gap:8px;align-items:start}
+.sugestoes{list-style:none;margin:4px 0 0;padding:0;border:1px solid var(--linha);border-radius:10px;overflow:hidden;background:var(--painel)}
+.sugestoes li{counter-increment:none;border:0;border-bottom:1px solid var(--linha);border-radius:0;padding:8px 10px;cursor:pointer}
+.sugestoes li::before{display:none}
+.sugestoes li:last-child{border-bottom:0}
+.sugestoes li:hover,.sugestoes li:focus{background:var(--bg)}
+.sugestoes b{display:block;font-size:.92rem}
+.sugestoes span,.escolhido span{font-size:.8rem;color:var(--suave)}
+.escolhido{font-size:.92rem}
+.escolhido b{display:block}
+.escolhido a{color:var(--verde);font-size:.85rem;cursor:pointer}
+.alerta{color:var(--aviso);font-size:.82rem;margin-top:6px}
+.nota{font-size:.82rem;color:var(--suave);margin-top:6px}
+button.enviar{margin-top:18px;width:100%;font:inherit;font-size:1.05rem;font-weight:700;padding:14px;border-radius:12px;border:0;background:var(--verde);color:#fff;cursor:pointer}
+button.enviar:disabled{opacity:.45;cursor:default}
+#estado{color:var(--suave);font-size:.9rem;margin:0 0 12px}
+.rodape{margin-top:22px;font-size:.8rem;color:var(--suave);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="casca">
+  <p class="marca">Medicamentos Baratos</p>
+  <h1>Lista de preços da sua farmácia</h1>
+  <p class="sub">Informe até 10 medicamentos que você mais vende e o preço no balcão. Eles aparecem para quem procura na sua região, sempre com a data de hoje.</p>
+
+  <div class="dados">
+    <div><label for="farmacia">Nome da farmácia</label><input id="farmacia" autocomplete="organization"></div>
+    <div><label for="cnpj">CNPJ da farmácia</label><input id="cnpj" inputmode="numeric" placeholder="00.000.000/0000-00"></div>
+  </div>
+
+  <p id="estado">Carregando a tabela de medicamentos…</p>
+  <ol id="itens"></ol>
+  <button class="enviar" id="enviar" disabled>Enviar pelo WhatsApp</button>
+  <p class="rodape">Escolha sempre a apresentação exata (dose, quantidade e laboratório): é ela que a pessoa vai encontrar no balcão. Se o preço passar do teto da tabela CMED, o formulário avisa para você conferir.</p>
+</div>
+<script>
+// Número do WhatsApp do Medicamentos Baratos que recebe as listas. Vazio: a pessoa escolhe o contato.
+const NUMERO_WHATSAPP = "";
+const LINHAS = 10;
+
+const SINONIMOS = {comprimido:"com",comprimidos:"com",comp:"com",capsula:"cap",capsulas:"cap",
+  dragea:"drg",drageas:"drg",gota:"got",gotas:"got",xarope:"xpe",solucao:"sol",suspensao:"sus",
+  injetavel:"inj",injecao:"inj",ampola:"amp",pomada:"pom",creme:"crem",gel:"gel",spray:"spr",
+  efervescente:"efev",sache:"sache"};
+const UNID = "mcg|mg|g|ml|ui|meq|%";
+
+const semAcento = t => t.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const numeroDose = p => { const m = semAcento(p).match(new RegExp(`^(\\d+(?:[.,]\\d+)?)(?:${UNID})?$`));
+  return m ? String(parseFloat(m[1].replace(",","."))) : null; };
+
+let ITENS = [];
+const eanLimpo = e => { e = String(e||"").replace(/\D/g,""); return e.length===14 && e[0]==="0" ? e.slice(1) : e; };
+function preparar(dados){
+  const c = Object.fromEntries(dados.colunas.map((n,i)=>[n,i]));
+  ITENS = dados.itens.map(l=>{
+    const it = {substancia:l[c.substancia], produto:l[c.produto], apresentacao:l[c.apresentacao],
+      laboratorio:l[c.laboratorio], tipo:l[c.tipo], pmc:l[c.pmc], forma:l[c.forma],
+      unidade:l[c.unidade], pu:l[c.preco_unidade], doses:l[c.doses]||"",
+      ean: c.ean!=null ? eanLimpo(l[c.ean]) : ""};
+    it.tokens = semAcento([it.substancia,it.produto,it.apresentacao,it.laboratorio,it.tipo].join(" "))
+      .split(/[^a-z0-9]+/).filter(Boolean);
+    return it;
+  });
+}
+
+function buscar(termo){
+  const palavras = termo.split(/\s+/).filter(Boolean);
+  let numeros = palavras.map(numeroDose).filter(Boolean);
+  let textuais = palavras.filter(p=>!numeroDose(p)).map(semAcento);
+  if (!textuais.length){ textuais = palavras.map(semAcento); numeros = []; }
+  const casaPalavra = (it,p) => { const alt = SINONIMOS[p];
+    return it.tokens.some(t => t.startsWith(p) || (alt && t === alt)); };
+  return ITENS.filter(it => textuais.every(p=>casaPalavra(it,p)) &&
+                            numeros.every(n => it.doses.includes(` ${n} `)));
+}
+
+const reais = (v,casas=2) => "R$ " + v.toLocaleString("pt-BR",{minimumFractionDigits:casas,maximumFractionDigits:casas});
+const titulo = t => t.toLowerCase().replace(/(^|\s)\S/g, s=>s.toUpperCase());
+function el(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+
+const PLURAL = {comprimido:"comprimidos","cápsula":"cápsulas","drágea":"drágeas","sachê":"sachês",
+  ampola:"ampolas",envelope:"envelopes",unidade:"unidades"};
+const TIPOS = {novo:"Original", referencia:"Referência", generico:"Genérico", similar:"Similar"};
+const frase = t => { t = (t||"").toLowerCase().trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
+function rotuloTipo(t){ const k = semAcento(t||""); for (const c in TIPOS) if (k.includes(c)) return TIPOS[c]; return t||""; }
+function dose(apres){
+  const m = (apres||"").toUpperCase().match(/^\s*((?:\d+(?:[.,]\d+)?\s*(?:MCG|MG|G|ML|UI|MEQ|%)(?:\s*\/\s*(?:ML|G|DOSE|GOTA))?\s*\+?\s*)+)/);
+  return m ? m[1].replace(/\s*\+\s*$/,"").replace(/(\d)\s*(MCG|MG|G|ML|UI|MEQ|%)/g,"$1 $2").replace(/\s*\/\s*/g,"/").replace(/\s+\+\s*/g," + ").toLowerCase().trim() : "";
+}
+const ACENTOS = {sodica:"sódica",potassica:"potássica",calcica:"cálcica",magnesica:"magnésica",
+  acido:"ácido",acetilsalicilico:"acetilsalicílico",folico:"fólico",ascorbico:"ascórbico",
+  valproico:"valproico",clavulanico:"clavulânico",fusidico:"fusídico",citrico:"cítrico",
+  sodico:"sódico",potassico:"potássico",calcico:"cálcico",magnesio:"magnésio",zinco:"zinco",
+  ferroso:"ferroso",tartarato:"tartarato",succinato:"succinato",besilato:"besilato"};
+const acentuar = t => t.replace(/[a-zà-ú]+/g, w => ACENTOS[w] || w);
+function empresa(t){
+  const pequenas = ["e","de","da","do","das","dos"];
+  return (t||"").toLowerCase().split(/\s+/).map((w,i)=> i && pequenas.includes(w) ? w :
+    w==="ltda" ? "Ltda" : /^s\.?a\.?$/.test(w) ? "S.A." : w.charAt(0).toUpperCase()+w.slice(1)).join(" ");
+}
+function nomeAmigavel(r){
+  const sub = (r.substancia||"").replace(/\s*;\s*/g," + ");
+  const marca = semAcento(r.produto||""), base = semAcento(sub).split(/[^a-z]+/).filter(w=>w.length>3);
+  const generico = base.length && base.some(w=>marca.includes(w));
+  // No genérico, o nome do produto costuma ser mais completo (ex.: "dipirona sódica").
+  const nome = generico
+    ? frase(acentuar((marca.length >= semAcento(sub).length ? r.produto : sub).toLowerCase()))
+    : `${frase(r.produto)} (${acentuar(sub.toLowerCase())})`;
+  const d = dose(r.apresentacao);
+  return d ? `${nome} ${d}` : nome;
+}
+function embalagem(r){
+  if (!r.pmc || !r.pu) return "";
+  const q = Math.round(r.pmc / r.pu);
+  if (r.unidade === "ml") return `frasco de ${q} ml`;
+  if (r.unidade === "g") return `embalagem de ${q} g`;
+  return `caixa com ${q} ${q === 1 ? r.unidade : (PLURAL[r.unidade] || r.unidade)}`;
+}
+
+
+const $ = id => document.getElementById(id);
+const escolhas = Array(LINHAS).fill(null);    // {r, preco}
+const descricao = r => [embalagem(r), rotuloTipo(r.tipo), empresa(r.laboratorio)].filter(Boolean).join(" · ");
+const lerPreco = t => { const v = parseFloat(String(t).replace(/[^\d,.]/g,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",",".")); return isFinite(v) && v>0 ? v : null; };
+
+function montarLinha(i){
+  const li = el("li"); const linha = el("div","linha");
+  const esq = el("div"); const campo = el("input"); campo.type="search"; campo.autocomplete="off";
+  campo.placeholder = "Ex.: dipirona 500"; campo.setAttribute("aria-label",`Medicamento ${i+1}`);
+  const lista = el("ul","sugestoes"); lista.hidden = true;
+  const preco = el("input"); preco.inputMode="decimal"; preco.placeholder="R$ 0,00"; preco.setAttribute("aria-label",`Preço ${i+1}`);
+  const alerta = el("div","alerta"); alerta.hidden = true;
+  esq.append(campo, lista); linha.append(esq, preco); li.append(linha, alerta);
+
+  function mostrarEscolhido(r){
+    esq.innerHTML = ""; const box = el("div","escolhido");
+    box.append(el("b",null,nomeAmigavel(r)), el("span",null,descricao(r)));
+    const trocar = el("a",null," Trocar"); trocar.onclick = ()=>{ escolhas[i]=null; esq.innerHTML=""; esq.append(campo,lista); campo.value=""; campo.focus(); conferir(); };
+    box.append(document.createElement("br"), trocar); esq.append(box);
+  }
+  campo.oninput = ()=>{
+    lista.innerHTML = ""; const t = campo.value.trim();
+    if (t.length < 3){ lista.hidden = true; return; }
+    // primeiro o remédio puro (sem associação) cuja substância começa pelo que foi digitado; depois genérico; depois o mais barato
+    const p1 = semAcento(t.split(/\s+/)[0]);
+    const nota = r => (semAcento(r.substancia||"").startsWith(p1) ? 0 : 2) + ((r.substancia||"").includes(";") ? 1 : 0);
+    const gen = r => semAcento(r.tipo||"").includes("generico") ? 0 : 1;
+    const res = buscar(t).sort((a,b)=> nota(a)-nota(b) || gen(a)-gen(b) || ((a.pu??1e9)-(b.pu??1e9))).slice(0,8);
+    if (!res.length){ lista.hidden=false; const n=el("li"); n.append(el("span",null,"Nada encontrado. Confira a grafia ou tire a dose.")); lista.append(n); return; }
+    res.forEach(r=>{ const op = el("li"); op.tabIndex=0;
+      op.append(el("b",null,nomeAmigavel(r)), el("span",null,descricao(r)));
+      op.onclick = op.onkeydown = e=>{ if(e.type==="keydown" && e.key!=="Enter") return;
+        escolhas[i] = {r, preco: lerPreco(preco.value)}; lista.hidden=true; mostrarEscolhido(r); preco.focus(); conferir(); };
+      lista.append(op); });
+    lista.hidden = false;
+  };
+  preco.oninput = ()=>{ if(escolhas[i]) escolhas[i].preco = lerPreco(preco.value); conferir(); };
+  li._alerta = alerta; li._indice = i;
+  return li;
+}
+
+function conferir(){
+  let ok = 0;
+  document.querySelectorAll("#itens > li").forEach(li=>{
+    const e = escolhas[li._indice]; const a = li._alerta; a.hidden = true;
+    if (!e) return;
+    if (e.preco && e.r.pmc && e.preco > e.r.pmc){ a.hidden=false; a.textContent = `Acima do teto da lei para esta apresentação (${reais(e.r.pmc)}). Confira o preço ou a apresentação.`; }
+    if (e.preco) ok++;
+  });
+  $("enviar").disabled = !(ok && $("farmacia").value.trim());
+}
+$("farmacia").oninput = conferir;
+
+$("enviar").onclick = ()=>{
+  const hoje = new Date().toLocaleDateString("pt-BR");
+  const linhas = escolhas.filter(e=>e && e.preco).map((e,k)=>
+    `${k+1}) ${nomeAmigavel(e.r)}, ${descricao(e.r)} | EAN ${e.r.ean||"sem código"} | ${reais(e.preco)}`);
+  const texto = ["Medicamentos Baratos — lista de preços", `Farmácia: ${$("farmacia").value.trim()}`,
+    `CNPJ: ${$("cnpj").value.trim()||"não informado"}`, `Data: ${hoje}`, "", ...linhas].join("\n");
+  window._ultimaMensagem = texto;
+  window.open(`https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+};
+
+fetch("precos.json",{cache:"no-cache"}).then(r=>{ if(!r.ok) throw 0; return r.json(); }).then(d=>{
+  preparar(d);
+  for (let i=0;i<LINHAS;i++) $("itens").append(montarLinha(i));
+  $("estado").textContent = "Comece a digitar o nome e escolha a apresentação na lista.";
+}).catch(()=>{ $("estado").textContent = "Não foi possível carregar a tabela de medicamentos. Tente de novo em instantes."; });
+</script>
+</body>
+</html>

@@ -49,6 +49,8 @@ li:hover{background:var(--bg)}
 .desvio b{display:block;font-size:1.05rem}
 .desvio span{font-size:.75rem;color:var(--suave)}
 .ir{margin-top:6px;font-size:.8rem;padding:5px 9px}
+a.whats{display:inline-block;margin:6px 0 0 6px;font-size:.8rem;font-weight:600;padding:5px 9px;border-radius:8px;
+  border:1.5px solid var(--indep);color:var(--indep);text-decoration:none}
 .remedio{padding:10px 14px;border-bottom:1px solid var(--linha);font-size:.9rem;background:var(--bg)}
 .remedio b{display:block}
 .remedio a{color:var(--indep);font-size:.85rem}
@@ -297,6 +299,16 @@ function linkIr(f){
   const tm = modo==="foot" ? "walking" : "driving";
   return `https://www.google.com/maps/dir/?api=1&origin=${origem.join(",")}&destination=${destino.join(",")}&waypoints=${f.pos.join(",")}&travelmode=${tm}`;
 }
+// envia a farmácia escolhida ao WhatsApp da própria pessoa (sem a localização dela)
+function textoWhats(f, p){
+  let t = "Medicamentos Baratos\n";
+  if (NOME_REMEDIO) t += NOME_REMEDIO + "\n";
+  if (p && p.valor && p.est) t += `R$ ${p.valor.toFixed(2).replace(".",",")} pelo app, retire na loja. Preço lido em ${PRECOS_DATA}. Pode ter mudado desde então.\n`;
+  t += `${f.nome}\n${f.end||"Endereço não informado"}\n${textoDesvio(f.extra)} no meu trajeto\n`;
+  t += `Mapa: https://www.google.com/maps/search/?api=1&query=${f.pos.join(",")}`;
+  if (NOME_REMEDIO) t += `\nVer preços de novo: ${location.origin}${location.pathname.replace(/caminho\.html$/,"busca.html")}?q=${encodeURIComponent(termoBusca())}`;
+  return t;
+}
 function desenharLista(){
   camada.clearLayers();
   const ul=$("lista"); ul.innerHTML="";
@@ -329,7 +341,13 @@ function desenharLista(){
     li.querySelector(".end").textContent=f.end||"Endereço não informado";
     li.querySelector("a.ir").href=linkIr(f);
     li.querySelector("a.ir").onclick=e=>e.stopPropagation();
-    li.onclick=()=>{ mapa.setView(f.pos,17); m.openPopup(); };
+    li.onclick=()=>{ mapa.setView(f.pos,17); m.openPopup();
+      // o botão do WhatsApp aparece só na farmácia escolhida
+      ul.querySelectorAll("a.whats").forEach(x=>x.remove());
+      const w=document.createElement("a"); w.className="whats"; w.textContent="Enviar para meu WhatsApp";
+      w.href="https://wa.me/?text="+encodeURIComponent(textoWhats(f,p)); w.target="_blank"; w.rel="noopener";
+      w.onclick=e=>e.stopPropagation();
+      li.querySelector("a.ir").after(w); };
     ul.appendChild(li);
   });
 }

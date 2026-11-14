@@ -36,6 +36,8 @@ main{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0}
 #mapa{min-height:300px}
 aside{background:var(--painel);border-left:1px solid var(--linha);display:flex;flex-direction:column;min-height:0}
 #estado{padding:10px 14px;font-size:.9rem;color:var(--suave);border-bottom:1px solid var(--linha)}
+.procura{padding:8px 14px;border-bottom:1px solid var(--linha)}
+.procura input{width:100%;min-width:0}
 .filtro{padding:8px 14px;border-bottom:1px solid var(--linha);display:flex;gap:6px}
 .filtro button{padding:6px 10px;font-size:.85rem;border-radius:999px}
 ul{list-style:none;margin:0;padding:0;overflow:auto;flex:1;padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -94,6 +96,7 @@ a.whats{display:inline-block;margin:6px 0 0 6px;font-size:.8rem;font-weight:600;
   <aside>
     <div id="estado">Defina a saída e o destino.</div>
     <div id="remedio" class="remedio" hidden></div>
+    <div class="procura"><input id="campoFarmacia" type="search" autocomplete="off" placeholder="Procurar farmácia pelo nome, ex.: Drogasil" aria-label="Procurar farmácia pelo nome"></div>
     <div class="filtro">
       <button data-f="todas" aria-pressed="true">Todas</button>
       <button data-f="indep" aria-pressed="false">Independentes</button>
@@ -227,6 +230,7 @@ document.querySelectorAll(".modo button").forEach(b=> b.onclick=()=>{
 document.querySelectorAll(".ordem button").forEach(b=> b.onclick=()=>{
   document.querySelectorAll(".ordem button").forEach(x=>x.setAttribute("aria-pressed","false"));
   b.setAttribute("aria-pressed","true"); ordem=b.dataset.o; desenharLista(); });
+$("campoFarmacia").oninput = ()=>{ if(resultados.length) desenharLista(); };
 document.querySelectorAll(".filtro:not(.ordem) button").forEach(b=> b.onclick=()=>{
   document.querySelectorAll(".filtro:not(.ordem) button").forEach(x=>x.setAttribute("aria-pressed","false"));
   b.setAttribute("aria-pressed","true"); filtro=b.dataset.f; desenharLista(); });
@@ -312,11 +316,14 @@ function textoWhats(f, p){
 function desenharLista(){
   camada.clearLayers();
   const ul=$("lista"); ul.innerHTML="";
-  let lista = resultados.filter(f=>filtro==="todas"||f.t===filtro);
+  const procura = semAc($("campoFarmacia").value).trim();
+  let lista = resultados.filter(f=>(filtro==="todas"||f.t===filtro) && (!procura || semAc(f.nome+" "+(f.bruto||"")).includes(procura)));
   if (EAN && ordem==="preco"){
     const v = f => { const p=precoDe(f); return p && p.valor && p.est ? p.valor : Infinity; };
     lista = lista.slice().sort((a,b)=> (v(a)-v(b)) || (a.extra-b.extra));
   }
+  if (!lista.length && procura){ const li=document.createElement("li"); li.style.display="block"; li.style.cursor="default";
+    li.textContent="Nenhuma farmácia com esse nome neste trajeto."; ul.appendChild(li); }
   lista.forEach(f=>{
     const c=cor(f.t==="indep"?"--indep":"--rede");
     const m=L.circleMarker(f.pos,{radius:f.t==="indep"?8:6,color:c,fillColor:c,fillOpacity:f.aprox?.15:.9,weight:f.aprox?2:1}).addTo(camada);

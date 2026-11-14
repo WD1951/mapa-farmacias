@@ -37,7 +37,7 @@ main{flex:1;display:grid;grid-template-columns:1fr 380px;min-height:0}
 aside{background:var(--painel);border-left:1px solid var(--linha);display:flex;flex-direction:column;min-height:0}
 #estado{padding:10px 14px;font-size:.9rem;color:var(--suave);border-bottom:1px solid var(--linha)}
 .procura{padding:8px 14px;border-bottom:1px solid var(--linha)}
-.procura input{width:100%;min-width:0}
+.procura input{display:block;width:100%;min-width:0;box-sizing:border-box}
 .filtro{padding:8px 14px;border-bottom:1px solid var(--linha);display:flex;gap:6px}
 .filtro button{padding:6px 10px;font-size:.85rem;border-radius:999px}
 ul{list-style:none;margin:0;padding:0;overflow:auto;flex:1;padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -312,7 +312,7 @@ function textoWhats(f, p){
   let t = "Medicamentos Baratos\n";
   if (NOME_REMEDIO) t += NOME_REMEDIO + "\n";
   if (p && p.valor && p.est) t += `R$ ${p.valor.toFixed(2).replace(".",",")} pelo app, retire na loja. Preço lido em ${PRECOS_DATA}. Pode ter mudado desde então.\n`;
-  t += `${f.nome}\n${f.end||"Endereço não informado"}\n${textoDesvio(f.extra)} no meu trajeto\n`;
+  t += `${f.nome}\n${f.end||"Endereço não informado"}\n${f.extra<60 ? "Fica no meu trajeto" : textoDesvio(f.extra)+" de desvio no meu trajeto"}\n`;
   t += `Mapa: https://www.google.com/maps/search/?api=1&query=${f.pos.join(",")}`;
   if (NOME_REMEDIO) t += `\nVer preços de novo: ${location.origin}${location.pathname.replace(/caminho\.html$/,"busca.html")}?q=${encodeURIComponent(termoBusca())}`;
   return t;

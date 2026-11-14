@@ -45,6 +45,7 @@ li:last-child{border-bottom:0}
 .site .rede{color:var(--tinta)}
 a.caminho{display:inline-block;margin-top:6px;font-size:.85rem;font-weight:600;color:#fff;background:#0f8a6b;border-radius:10px;padding:7px 12px;text-decoration:none}
 a.caminho:hover,a.caminho:focus-visible{background:#0b6f56}
+a.caminho .pino{width:1.1em;height:1.1em;vertical-align:-.18em;margin-right:5px}
 .acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .acoes a{margin:0}
 a.whats{display:inline-block;font-size:.95rem;font-weight:600;color:#0f8a6b;background:transparent;border:2px solid #0f8a6b;border-radius:10px;padding:8px 14px;text-decoration:none}
@@ -194,7 +195,9 @@ function embalagem(r){
 }
 
 function linkCaminho(r){
-  const a = el("a","caminho","📍 Ver no meu caminho");
+  const a = el("a","caminho");
+  // alfinete desenhado na cor do texto do botão (branco sobre o verde), no lugar do emoji vermelho
+  a.innerHTML = '<svg class="pino" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Ver no meu caminho';
   const nome = `${nomeAmigavel(r)}, ${embalagem(r)} · ${rotuloTipo(r.tipo)} ${empresa(r.laboratorio)}`;
   a.href = `caminho.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}`;
   return a;

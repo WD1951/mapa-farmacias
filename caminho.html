@@ -62,8 +62,12 @@ a.whats{display:inline-block;margin:6px 0 0 6px;font-size:.8rem;font-weight:600;
 .preco .esg{color:var(--suave);text-decoration:line-through;font-weight:400}
 .preco a.site{color:var(--indep);font-weight:600;margin-left:4px}
 .dica{font-size:.8rem;color:var(--suave);padding:8px 14px;border-top:1px solid var(--linha)}
+[hidden]{display:none!important}
 @media (max-width:760px){
-  main{grid-template-columns:1fr;grid-template-rows:50vh auto}
+  /* no celular a página rola inteira: mapa em cima, lista completa embaixo */
+  html,body{height:auto}
+  ul{overflow:visible;flex:none}
+  main{grid-template-columns:1fr;grid-template-rows:45vh auto}
   aside{border-left:0;border-top:1px solid var(--linha)}
 }
 </style>

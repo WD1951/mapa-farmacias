@@ -164,7 +164,7 @@ if (EAN){
     box.innerHTML=""; const b=document.createElement("b"); b.textContent=NOME_REMEDIO||"Remédio escolhido";
     const s=document.createElement("span"); s.className="mutc";
     s.textContent=PRECOS.length?` Preços dos sites das redes, lidos em ${PRECOS_DATA}. Compre pelo app e retire na loja.`:" Nenhuma rede tem preço para este item hoje.";
-    const t=document.createElement("a"); t.href="busca.html"; t.textContent=" Trocar remédio";
+    const t=document.createElement("a"); t.href="busca.html"+(termoBusca()?"?q="+encodeURIComponent(termoBusca()):""); t.textContent=" Trocar remédio";
     box.append(b,s,t);
     if(resultados.length) desenharLista();
   }).catch(()=>{});

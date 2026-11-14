@@ -222,6 +222,7 @@ function item(r, marca){
 function mostrar(termo){
   const saida = document.getElementById("saida"); saida.innerHTML = "";
   const t = termo.trim(); if(!t) return;
+  try { history.replaceState(null, "", "?q=" + encodeURIComponent(t)); } catch(e){}   // guarda a busca: ao voltar, ela reaparece
   const res = buscar(t);
   const estado = document.getElementById("estado");
   if (!res.length){ estado.textContent = `Nada encontrado para “${t}”. Confira a grafia ou tire a dose.`; return; }

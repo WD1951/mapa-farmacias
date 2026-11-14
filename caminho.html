@@ -344,7 +344,7 @@ function desenharLista(){
     li.onclick=()=>{ mapa.setView(f.pos,17); m.openPopup();
       // o botão do WhatsApp aparece só na farmácia escolhida
       ul.querySelectorAll("a.whats").forEach(x=>x.remove());
-      const w=document.createElement("a"); w.className="whats"; w.textContent="Enviar para meu WhatsApp";
+      const w=document.createElement("a"); w.className="whats"; w.textContent="Enviar ao WhatsApp";
       w.href="https://wa.me/?text="+encodeURIComponent(textoWhats(f,p)); w.target="_blank"; w.rel="noopener";
       w.onclick=e=>e.stopPropagation();
       li.querySelector("a.ir").after(w); };

@@ -49,6 +49,14 @@ li:hover,li:focus{background:var(--bg);outline:none}
 .dist{font-size:.85rem;color:var(--suave);white-space:nowrap}
 .aprox{font-size:.75rem;color:var(--outro);margin-top:2px}
 .dica{font-size:.8rem;color:var(--suave);padding:8px 14px}
+.onde{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.onde input{font:inherit;font-size:.95rem;padding:8px 12px;border-radius:10px;border:1px solid var(--linha);
+  background:var(--painel);color:var(--tinta);min-width:0;flex:1 1 220px}
+.onde button,.ir{font:inherit;font-size:.95rem;padding:8px 14px;border-radius:999px;border:1px solid var(--linha);
+  background:var(--painel);color:var(--tinta);cursor:pointer}
+.onde .forte{background:var(--indep);color:#fff;border-color:var(--indep)}
+.remedio{color:var(--indep);font-size:.9rem;font-weight:600;text-decoration:none}
+.ir{display:inline-block;margin-top:6px;font-size:.8rem;padding:5px 10px;text-decoration:none}
 @media (max-width:760px){
   main{grid-template-columns:1fr;grid-template-rows:55vh auto}
   aside{border-left:0;border-top:1px solid var(--linha)}
@@ -60,7 +68,13 @@ li:hover,li:focus{background:var(--bg);outline:none}
   <div>
     <a class="volta" href="./">← Início</a>
     <h1>Farmácias ao redor</h1>
-    <div class="sub">Toque no mapa para mudar o centro. <span id="fonte">Carregando dados…</span></div>
+    <div class="sub">Comece pela sua localização ou por um endereço. Também dá para tocar no mapa.</div>
+    <div class="onde">
+      <button class="forte" id="btnLocal">Usar minha localização</button>
+      <input id="campoEnd" placeholder="Ou digite um endereço">
+      <button id="btnEnd">Buscar</button>
+    </div>
+    <a class="remedio" href="busca.html">Procurar o preço de um remédio ›</a>
   </div>
   <div class="raios" role="group" aria-label="Raio">
     <button data-r="500">500 m</button>
@@ -74,15 +88,15 @@ li:hover,li:focus{background:var(--bg);outline:none}
     <div class="contas">
       <div class="conta i"><b id="cIndep">–</b><span>independentes</span></div>
       <div class="conta"><b id="cRede">–</b><span>de rede</span></div>
-      <div class="conta"><b id="cTotal">–</b><span>concorrentes</span></div>
+      <div class="conta"><b id="cTotal">–</b><span>no total</span></div>
     </div>
-    <div class="fora">Fora da conta:
+    <div class="fora">Também no raio:
       <span><i style="background:var(--manip)"></i><b id="cManip">–</b> manipulação</span>
       <span><i style="background:var(--outro)"></i><b id="cOutro">–</b> hospital ou mercado</span>
     </div>
     <div id="estado">Carregando…</div>
     <ul id="lista"></ul>
-    <div class="dica"><span id="regra"></span> Manipulação, hospital e mercado ficam fora da conta. <span id="data"></span></div>
+    <div class="dica"><span id="regra"></span> Manipulação, hospital e mercado não entram no total. <span id="fonte"></span> <span id="data"></span></div>
   </aside>
 </main>
 
@@ -114,8 +128,8 @@ function limpar(lista){            // tira encerradas e repetidas no mesmo ender
   });
 }
 
-// Centro inicial: Alameda Santos, Jardins
-let centro = [-23.5668, -46.6530];
+// Centro inicial: Avenida Paulista (até a pessoa escolher o ponto dela)
+let centro = [-23.5614, -46.6559];
 let raio = 1000;
 
 const REDES = ["drogasil","droga raia","raia","drogaria são paulo","drogaria sao paulo","pacheco",
@@ -217,10 +231,13 @@ async function atualizar(){
     li.tabIndex = 0;
     const bolinha = p.aprox ? `border:2px solid ${c};background:transparent` : `background:${c}`;
     li.innerHTML = `<span class="pt" style="${bolinha}"></span>
-      <div><div class="nome"></div><div class="end"></div>${p.aprox?'<div class="aprox"></div>':''}</div><span class="dist">${metros(p)}</span>`;
+      <div><div class="nome"></div><div class="end"></div>${p.aprox?'<div class="aprox"></div>':''}<a class="ir" target="_blank" rel="noopener">Como chegar</a></div><span class="dist">${metros(p)}</span>`;
     if (p.aprox) li.querySelector(".aprox").textContent = AVISO[p.prec];
     li.querySelector(".nome").textContent = p.nome;
     li.querySelector(".end").textContent = p.end || "Endereço não informado";
+    const ir = li.querySelector("a.ir");
+    ir.href = `https://www.google.com/maps/dir/?api=1&destination=${p.pos.join(",")}`;
+    ir.onclick = e=>e.stopPropagation();
     li.onclick = ()=>{ mapa.setView(p.pos,17); m.openPopup(); };
     li.onkeydown = e=>{ if(e.key==="Enter") li.onclick(); };
     lista.appendChild(li);
@@ -244,6 +261,27 @@ document.querySelectorAll(".raios button").forEach(b=>{
   };
 });
 mapa.on("click", e=>{ centro=[e.latlng.lat,e.latlng.lng]; atualizar(); });
+const avisar = t => document.getElementById("estado").textContent = t;
+document.getElementById("btnLocal").onclick = ()=>{
+  if(!navigator.geolocation){ avisar("Este aparelho não informa a localização. Digite um endereço."); return; }
+  avisar("Pedindo sua localização…");
+  navigator.geolocation.getCurrentPosition(
+    p=>{ centro=[p.coords.latitude,p.coords.longitude]; atualizar(); },
+    ()=> avisar("Localização não autorizada. Digite um endereço ou toque no mapa."),
+    {enableHighAccuracy:true,timeout:10000});
+};
+async function buscarEnd(){
+  const q=document.getElementById("campoEnd").value.trim(); if(!q) return;
+  avisar("Procurando o endereço…");
+  try{
+    const r=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&viewbox=-47.0,-23.2,-46.3,-24.0&q="+encodeURIComponent(q+", São Paulo"));
+    const j=await r.json();
+    if(!j.length){ avisar("Endereço não encontrado. Tente com número e bairro, ou toque no mapa."); return; }
+    centro=[+j[0].lat,+j[0].lon]; atualizar();
+  }catch(e){ avisar("Falha na busca de endereço. Toque no mapa para escolher o ponto."); }
+}
+document.getElementById("btnEnd").onclick=buscarEnd;
+document.getElementById("campoEnd").onkeydown=e=>{ if(e.key==="Enter") buscarEnd(); };
 
 atualizar();
 </script>

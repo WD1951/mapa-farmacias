@@ -50,7 +50,8 @@ li:hover,li:focus{background:var(--bg);outline:none}
 .end{font-size:.8rem;color:var(--suave)}
 .dist{font-size:.85rem;color:var(--suave);white-space:nowrap}
 .aprox{font-size:.75rem;color:var(--outro);margin-top:2px}
-.dica{font-size:.8rem;color:var(--suave);padding:8px 14px}
+.dica{font-size:.8rem;color:var(--suave);padding:8px 14px;border-top:1px solid var(--linha)}
+.dica summary{cursor:pointer}
 .onde{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
 .onde input{font:inherit;font-size:.95rem;padding:8px 12px;border-radius:10px;border:1px solid var(--linha);
   background:var(--painel);color:var(--tinta);min-width:0;flex:1 1 220px}
@@ -64,7 +65,10 @@ li:hover,li:focus{background:var(--bg);outline:none}
 .filtros button[aria-pressed="true"]{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c);font-weight:600}
 .remedio{color:var(--indep);font-size:.9rem;font-weight:600;text-decoration:none}
 .remed{padding:10px 14px;border-bottom:1px solid var(--linha);font-size:.9rem;background:var(--bg)}
-.remed b{display:block}
+.remed b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.88rem}
+.remed .mutc{display:block;margin-top:2px}
+.conta{padding:10px 12px}
+.conta b{font-size:1.5rem}
 .remed a{color:var(--indep);font-size:.85rem}
 .mutc{font-size:.8rem;color:var(--suave)}
 .ordem{display:flex;gap:6px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--linha)}
@@ -77,7 +81,10 @@ li:hover,li:focus{background:var(--bg);outline:none}
 [hidden]{display:none!important}
 .ir{display:inline-block;margin-top:6px;font-size:.8rem;padding:5px 10px;text-decoration:none}
 @media (max-width:760px){
-  main{grid-template-columns:1fr;grid-template-rows:55vh auto}
+  /* no celular a página rola inteira: mapa em cima, lista completa embaixo */
+  html,body{height:auto}
+  ul{overflow:visible;flex:none}
+  main{grid-template-columns:1fr;grid-template-rows:45vh auto}
   aside{border-left:0;border-top:1px solid var(--linha)}
 }
 </style>
@@ -115,7 +122,7 @@ li:hover,li:focus{background:var(--bg);outline:none}
       <div class="conta"><b id="cRede">–</b><span>de rede</span></div>
       <div class="conta"><b id="cTotal">–</b><span>no total</span></div>
     </div>
-    <div class="fora">Também no raio:
+    <div class="fora" id="fora">Também no raio:
       <span><i style="background:var(--manip)"></i><b id="cManip">–</b> manipulação</span>
       <span><i style="background:var(--outro)"></i><b id="cOutro">–</b> hospital ou mercado</span>
     </div>
@@ -125,7 +132,7 @@ li:hover,li:focus{background:var(--bg);outline:none}
       <button data-o="preco" aria-pressed="false">Menor preço</button></div>
     <div id="estado">Carregando…</div>
     <ul id="lista"></ul>
-    <div class="dica"><span id="regra"></span> Manipulação, hospital e mercado não entram no total. <span id="fonte"></span> <span id="data"></span></div>
+    <details class="dica"><summary>Sobre os dados</summary><span id="regra"></span> Manipulação, hospital e mercado não entram no total. <span id="fonte"></span> <span id="data"></span></details>
   </aside>
 </main>
 
@@ -186,6 +193,7 @@ const reais = v => "R$ " + v.toFixed(2).replace(".",",");
 async function carregarPrecos(){
   if(!EAN) return;
   document.querySelector('.filtros button[data-f="manip"]').hidden = true;   // manipulação não vende caixa de remédio
+  document.getElementById("fora").hidden = true;
   try{
     const r = await fetch("precos_redes.json",{cache:"no-cache"}); const x = r.ok ? await r.json() : null;
     if(x){ PRECOS = (x.precos||{})[EAN] || [];
@@ -195,10 +203,11 @@ async function carregarPrecos(){
   const b = document.createElement("b"); b.textContent = NOME_REMEDIO || "Remédio escolhido";
   const s = document.createElement("span"); s.className = "mutc";
   s.textContent = PRECOS.length
-    ? ` Preço no site da rede, lido em ${PRECOS_DATA}. Vale comprando pelo app e retirando na loja; no balcão pode ser outro.`
-    : " Nenhuma rede tem preço para este item hoje.";
-  const t = document.createElement("a"); t.href = "busca.html"+(termoBusca()?"?q="+encodeURIComponent(termoBusca()):""); t.textContent = " Trocar remédio";
-  box.append(b, s, t);
+    ? `Preço no site da rede (${PRECOS_DATA}), comprando pelo app. No balcão pode ser outro.`
+    : "Nenhuma rede tem preço para este item hoje.";
+  const t = document.createElement("a"); t.href = "busca.html"+(termoBusca()?"?q="+encodeURIComponent(termoBusca()):""); t.textContent = "Trocar remédio";
+  s.append(" ", t);
+  box.append(b, s);
   document.getElementById("ordem").hidden = !PRECOS.length;
 }
 let filtro = PARAM.get("f");

@@ -1,4 +1,5 @@
 User-agent: *
 Disallow: /lista.html
+Disallow: /previa.html
 
 Sitemap: https://medicamentosbaratos.com.br/sitemap.xml

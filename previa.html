@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Prévia da farmácia — Medicamentos Baratos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f3;--painel:#fff;--tinta:#16232e;--suave:#5b6a76;--linha:#d5dce1;--indep:#0f8a6b;--zap:#1fa855;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;padding:18px}
+.form{max-width:520px;margin:0 auto 22px;display:grid;gap:10px}
+.form h1{font-size:1.2rem;margin:0}
+.form p{margin:0;color:var(--suave);font-size:.88rem}
+label{font-size:.85rem;color:var(--suave);display:grid;gap:4px}
+input,select{font:inherit;font-size:1rem;padding:10px 12px;border-radius:10px;border:1px solid var(--linha);background:#fff;color:var(--tinta);width:100%}
+.tela{max-width:420px;margin:0 auto;background:var(--painel);border-radius:22px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.12)}
+.topo{background:var(--tinta);color:#fff;padding:16px 18px}
+.marca{font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+.url{font-size:.78rem;opacity:.7;margin-top:2px}
+.faixa{background:#e7f5f0;color:var(--indep);font-size:.85rem;font-weight:600;padding:10px 18px}
+.cartao{padding:18px;border-bottom:1px solid var(--linha);display:grid;grid-template-columns:12px 1fr;gap:12px}
+.pt{width:12px;height:12px;border-radius:50%;background:var(--indep);margin-top:6px}
+.nome{font-weight:800;font-size:1.2rem}
+.tipo{font-size:.8rem;color:var(--indep);font-weight:600;margin-top:2px}
+.end{font-size:.9rem;color:var(--suave);margin-top:6px}
+.botoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.b{font-size:.9rem;padding:8px 14px;border-radius:999px;border:1px solid var(--linha);color:var(--tinta);background:#fff}
+.b.zap{background:var(--zap);border-color:var(--zap);color:#fff;font-weight:600}
+.precos{padding:14px 18px;font-size:.85rem;color:var(--suave)}
+.precos b{color:var(--tinta)}
+.rodape{padding:12px 18px 16px;font-size:.78rem;color:var(--suave);background:#f6f8f9}
+.aviso{max-width:520px;margin:16px auto 0;font-size:.8rem;color:var(--suave);text-align:center}
+</style>
+</head>
+<body>
+<div class="form">
+  <h1>Prévia para o dono da farmácia</h1>
+  <p>Preencha, tire o print da tela de baixo e mande pelo WhatsApp Business. Nada aqui é publicado.</p>
+  <label>Farmácia do cluster (opcional)
+    <select id="lista"><option value="">Escolher da lista…</option></select>
+  </label>
+  <label>Nome da farmácia<input id="nome" placeholder="Ex.: Drogaria Marquês de Itu"></label>
+  <label>Endereço<input id="end" placeholder="Ex.: Rua Marquês de Itu, 763"></label>
+  <label>WhatsApp da farmácia<input id="zap" inputmode="tel" placeholder="(11) 98765-4321"></label>
+</div>
+
+<div class="tela" id="tela">
+  <div class="topo"><div class="marca">Medicamentos Baratos</div><div class="url">medicamentosbaratos.com.br</div></div>
+  <div class="faixa">Farmácia parceira · aparece para quem mora perto</div>
+  <div class="cartao">
+    <span class="pt"></span>
+    <div>
+      <div class="nome" id="vNome">Nome da farmácia</div>
+      <div class="tipo">Farmácia independente</div>
+      <div class="end" id="vEnd">Endereço</div>
+      <div class="botoes">
+        <span class="b">Como chegar</span>
+        <span class="b zap" id="vZap">WhatsApp</span>
+      </div>
+    </div>
+  </div>
+  <div class="precos">Quem procura um remédio no site vê <b>o preço da sua farmácia</b> ao lado das grandes redes e do preço máximo da tabela oficial.</div>
+  <div class="rodape">Gratuito para a farmácia. Não vendemos medicamentos.</div>
+</div>
+<p class="aviso">Esta página não aparece no Google nem no menu do site.</p>
+
+<script>
+const LISTA = [{"n": "Milano Imp Exp", "e": "Avenida Ipiranga, 1071"}, {"n": "Drogaria E Perfumaria Sophysa", "e": "Avenida Ipiranga, 1130"}, {"n": "Drogaria Largo Do Paissandu Ltda-Epp", "e": "Largo Do Paissandu, 40"}, {"n": "Drogaria Nova Kaminari", "e": "Avenida Casper Libero, 45"}, {"n": "Farmacia Galo De Ouro", "e": "Avenida Sao Joao,, 755"}, {"n": "Droga Aurora", "e": "Rua Aurora, 602"}, {"n": "Drogaria Efata", "e": "Rua Br De Itapetininga, 309"}, {"n": "Ubb Comercio De Medicamentos", "e": "Rua Pedro Americo 32, 32"}, {"n": "Rpa Comercio De Medicamentos", "e": "Rua Marconi, 131"}, {"n": "Farma Brenos Drogaria", "e": "Avenida Senador  Queiroz, 171"}, {"n": "Drogaria Campea Popular Casper Libero", "e": "Avenida Casper Libero, 387"}, {"n": "Drogaria Efatas", "e": "Praca Praca Da Republica, 177, 194"}, {"n": "Drogaria Pharbase", "e": "Terminal Urb.  Da Estacao Da Luz - Metro, S/N"}, {"n": "Drogaria Bueno Popular", "e": "Rua Cel Xavier De Toledo, 104"}, {"n": "Droganil", "e": "Avenida Casper Libero, 451"}, {"n": "Drogalene", "e": "Avenida Sao Luis, 51"}, {"n": "Farmatem Sao Bento Drogaria", "e": "Ladeira Porto Geral, 65"}, {"n": "Drogaria Senador Queiroz", "e": "Avenida Senador Queiros, 295"}, {"n": "Drogaria Nova Luz", "e": "Rua Florencio De Abreu, 831"}, {"n": "Coopernorte", "e": "Rua Jose Bonifacio, 209"}, {"n": "Drogaria Quirino E Silva", "e": "Rua Comen Afonso Kherlakian, 80"}, {"n": "Drogaria Nova Duque", "e": "Avenida Duque De Caxias, 788"}, {"n": "A. A. Farma", "e": "Rua Alvaro De Carvalho, 179"}, {"n": "Ag Farma", "e": "Rua Alvaro De Carvalho, 179"}, {"n": "Drogaria Mais Voce", "e": "Avenida Sen Queiros, 360"}, {"n": "Drogaria Santa Rita", "e": "Avenida Sen Queiros, 171"}, {"n": "Farma Riv", "e": "Rua Miguel Carlos, 35"}, {"n": "Drogaria Saude E Beleza", "e": "Rua Prates, 71"}, {"n": "Drogaria Francel", "e": "Rua Pq Dom Pedro Ii, 816"}, {"n": "Farmalise Consolacao Drogaria E Perfumaria", "e": "Rua Da Consolacao, 835"}, {"n": "Drogaria Poupa Mais Farma", "e": "Rua Doutor Cesario Mota Junior, 391"}, {"n": "Drogaria Marques De Itu", "e": "Rua Marques De Itu, 763"}, {"n": "Droga Paim", "e": "Rua Paim, 306"}, {"n": "Farma Poupacerto", "e": "Rua Da Consolacao, 389"}, {"n": "Drogaria Cascais", "e": "Avenida Nove De Julho, 4984"}, {"n": "Sethdrogas Drogaria", "e": "Rua Rego Freitas, 184"}, {"n": "Drogaria Martins", "e": "Rua Paim, 235"}, {"n": "Drogaria Bem Estar", "e": "Rua Martins Fontes, 262"}, {"n": "Rede Farmil", "e": "Rua Jaguaribe, 17"}, {"n": "Farma Mais Popular", "e": "Rua Martins Fontes, 166"}, {"n": "Drogaria Dona Veridiana", "e": "Rua Dona Veridiana, 87"}, {"n": "Drogaria Estrela Popular", "e": "Largo Santa Cecilia, 89"}, {"n": "Bem Estar Farma", "e": "Rua Frederico Abranches, 331"}, {"n": "Drogaria Quinta Avenida", "e": "Avenida Rio Branco, 117"}, {"n": "Nova Rio Branco Drogaria E Perfumaria", "e": "Avenida Rio Branco, 373"}, {"n": "Drogaradium", "e": "Avenida Rio Branco, 464"}, {"n": "Luzfarma Popular", "e": "Avenida Prestes Maia, 714"}, {"n": "Drogaria Monte Fuji", "e": "Rua Com Afonso Kherlakian, 194"}, {"n": "Drogaria Ek", "e": "Rua Maua, 566"}, {"n": "Droga Kend'S", "e": "Rua Maria Antonia, 368"}, {"n": "Drogaria Nova Higienopolis", "e": "Rua Da Antonia De Queiros, 590"}, {"n": "Drogaria Estrela Popular 2", "e": "Rua Augusta, 704"}, {"n": "Drogaria Gentil", "e": "Avenida Ipiranga, 80"}, {"n": "Duo Pharma", "e": "Rua Da Consolacao, 391"}, {"n": "Ipharma", "e": "Rua Mato Grosso, 306"}, {"n": "Drogaria Estrela Sao Judas", "e": "Rua Treze De Maio, 23"}, {"n": "Drogaria Santos Dumont", "e": "Praca Quatorze Bis, 88"}, {"n": "Farma Brenos", "e": "Rua Major Quedinho, 340"}];
+const sel=document.getElementById("lista");
+const titulo=s=>s.toLowerCase().replace(/(^|\s|-)([a-zà-ú])/g,(m,a,b)=>a+b.toUpperCase()).replace(/\b(De|Da|Do|Dos|Das|E)\b/g,m=>m.toLowerCase());
+LISTA.forEach((f,i)=>{const o=document.createElement("option");o.value=i;o.textContent=titulo(f.n);sel.appendChild(o);});
+const $=id=>document.getElementById(id);
+function mascara(v){const d=v.replace(/\D/g,"").slice(0,11);
+  if(d.length<3)return d; if(d.length<=10)return `(${d.slice(0,2)}) ${d.slice(2,6)}${d.length>6?"-"+d.slice(6):""}`;
+  return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;}
+function atualiza(){
+  $("vNome").textContent=$("nome").value.trim()||"Nome da farmácia";
+  $("vEnd").textContent=$("end").value.trim()||"Endereço";
+  const z=$("zap").value.trim(); $("vZap").textContent=z?"WhatsApp "+z:"WhatsApp";
+}
+sel.addEventListener("change",()=>{const f=LISTA[sel.value]; if(!f)return; $("nome").value=titulo(f.n); $("end").value=titulo(f.e); atualiza();});
+$("zap").addEventListener("input",e=>{e.target.value=mascara(e.target.value);atualiza();});
+["nome","end"].forEach(id=>$(id).addEventListener("input",atualiza));
+</script>
+</body>
+</html>

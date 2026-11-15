@@ -63,6 +63,18 @@ li:hover,li:focus{background:var(--bg);outline:none}
 .filtros button i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .filtros button[aria-pressed="true"]{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c);font-weight:600}
 .remedio{color:var(--indep);font-size:.9rem;font-weight:600;text-decoration:none}
+.remed{padding:10px 14px;border-bottom:1px solid var(--linha);font-size:.9rem;background:var(--bg)}
+.remed b{display:block}
+.remed a{color:var(--indep);font-size:.85rem}
+.mutc{font-size:.8rem;color:var(--suave)}
+.ordem{display:flex;gap:6px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--linha)}
+.ordem button{font:inherit;font-size:.85rem;padding:5px 11px;border-radius:999px;border:1px solid var(--linha);background:var(--painel);color:var(--tinta);cursor:pointer}
+.ordem button[aria-pressed="true"]{background:var(--tinta);color:var(--painel);border-color:var(--tinta)}
+.preco{font-size:.9rem;margin-top:3px}
+.preco b{color:var(--indep)}
+.preco .esg{color:var(--suave);text-decoration:line-through;font-weight:400}
+.preco a.site{color:var(--indep);font-weight:600}
+[hidden]{display:none!important}
 .ir{display:inline-block;margin-top:6px;font-size:.8rem;padding:5px 10px;text-decoration:none}
 @media (max-width:760px){
   main{grid-template-columns:1fr;grid-template-rows:55vh auto}
@@ -107,6 +119,10 @@ li:hover,li:focus{background:var(--bg);outline:none}
       <span><i style="background:var(--manip)"></i><b id="cManip">–</b> manipulação</span>
       <span><i style="background:var(--outro)"></i><b id="cOutro">–</b> hospital ou mercado</span>
     </div>
+    <div id="remedioBox" class="remed" hidden></div>
+    <div class="ordem" id="ordem" hidden><span class="mutc">Ordenar por</span>
+      <button data-o="dist" aria-pressed="true">Mais perto</button>
+      <button data-o="preco" aria-pressed="false">Menor preço</button></div>
     <div id="estado">Carregando…</div>
     <ul id="lista"></ul>
     <div class="dica"><span id="regra"></span> Manipulação, hospital e mercado não entram no total. <span id="fonte"></span> <span id="data"></span></div>
@@ -145,8 +161,48 @@ function limpar(lista){            // tira encerradas e repetidas no mesmo ender
 let centro = [-23.5614, -46.6559];
 let raio = 1000;
 const FILTROS = ["todas","indep","rede","manip"];
-let filtro = new URLSearchParams(location.search).get("f");
-if (!FILTROS.includes(filtro)) filtro = "todas";
+// ---- remédio vindo da busca (mesma regra do "No meu caminho") ----
+const PARAM = new URLSearchParams(location.search);
+const EAN = (PARAM.get("ean")||"").replace(/\D/g,""), NOME_REMEDIO = PARAM.get("nome")||"";
+const SITE_REDE = [["Drogaria São Paulo", /drogaria sao paulo/], ["Pague Menos", /pague menos/]];
+// redes que bloqueiam o robô: o preço é visto no site, pelo celular da pessoa
+const SITE_BUSCA = [
+  [/drogasil/, "https://www.drogasil.com.br/search?w="],
+  [/droga raia|drogaraia|\braia\b/, "https://www.drogaraia.com.br/search?w="]
+];
+const termoBusca = () => NOME_REMEDIO.split(/\d/)[0].trim() || NOME_REMEDIO;
+let PRECOS = [], PRECOS_DATA = "", ordem = "dist";
+function precoDe(p){
+  if(!EAN) return null;
+  const sb = SITE_BUSCA.find(([re])=>re.test(p.bruto));
+  if(sb && termoBusca()) return {txt:"preço no site da rede", link: sb[1]+encodeURIComponent(termoBusca())};
+  const r = SITE_REDE.find(([,re])=>re.test(p.bruto));
+  if(!r) return p.t==="indep" ? {txt:"preço não informado"} : {txt:"rede sem preço consultado"};
+  const x = PRECOS.find(y=>y[0]===r[0]);
+  if(!x) return {txt:"não vende este item no site"};
+  return {valor:x[1], est:!!x[3]};
+}
+const reais = v => "R$ " + v.toFixed(2).replace(".",",");
+async function carregarPrecos(){
+  if(!EAN) return;
+  document.querySelector('.filtros button[data-f="manip"]').hidden = true;   // manipulação não vende caixa de remédio
+  try{
+    const r = await fetch("precos_redes.json",{cache:"no-cache"}); const x = r.ok ? await r.json() : null;
+    if(x){ PRECOS = (x.precos||{})[EAN] || [];
+      const [dt,hr]=x.atualizado.split("T"); const [a,m,d]=dt.split("-"); PRECOS_DATA=`${d}/${m} às ${hr.replace(":","h")}`; }
+  }catch(e){}
+  const box = document.getElementById("remedioBox"); box.hidden = false;
+  const b = document.createElement("b"); b.textContent = NOME_REMEDIO || "Remédio escolhido";
+  const s = document.createElement("span"); s.className = "mutc";
+  s.textContent = PRECOS.length
+    ? ` Preço no site da rede, lido em ${PRECOS_DATA}. Vale comprando pelo app e retirando na loja; no balcão pode ser outro.`
+    : " Nenhuma rede tem preço para este item hoje.";
+  const t = document.createElement("a"); t.href = "busca.html"+(termoBusca()?"?q="+encodeURIComponent(termoBusca()):""); t.textContent = " Trocar remédio";
+  box.append(b, s, t);
+  document.getElementById("ordem").hidden = !PRECOS.length;
+}
+let filtro = PARAM.get("f");
+if (!FILTROS.includes(filtro) || (EAN && filtro==="manip")) filtro = "todas";
 
 const REDES = ["drogasil","droga raia","raia","drogaria são paulo","drogaria sao paulo","pacheco",
   "pague menos","ultrafarma","onofre","panvel","extrafarma","drogarias dsp","farmais","drogaria iguatemi",
@@ -218,7 +274,7 @@ async function atualizar(){
   const pts = limpar(base.farmacias).map(f=>{
     const pos = [f.lat,f.lon];
     const end = [f.end, f.bairro].filter(Boolean).join(" · ");
-    return {pos, nome:f.nome?nomeBonito(f.nome):"Farmácia sem nome", end, t:tipo(f), d:distancia(centro,pos),
+    return {pos, nome:f.nome?nomeBonito(f.nome):"Farmácia sem nome", bruto:semAc(f.nome), end, t:tipo(f), d:distancia(centro,pos),
             aprox: f.precisao==="rua"||f.precisao==="cep", prec:f.precisao};
   }).filter(p=>p.d<=raio).sort((a,b)=>a.d-b.d);
   const metros = p => p.aprox ? `≈ ${Math.max(100, Math.round(p.d/100)*100)} m` : `${Math.round(p.d)} m`;
@@ -230,7 +286,11 @@ async function atualizar(){
   const COR={indep:"--indep",rede:"--rede",outro:"--outro",manip:"--manip"};
   const NOME={indep:"independente",rede:"rede",outro:"hospital ou mercado",manip:"manipulação"};
   pts.forEach(p=>N[p.t]++);
-  const vis = filtro==="todas" ? pts : pts.filter(p=>p.t===filtro);
+  let vis = filtro==="todas" ? pts.filter(p=>!(EAN && p.t==="manip")) : pts.filter(p=>p.t===filtro);
+  if (EAN && ordem==="preco"){
+    const v = p => { const x=precoDe(p); return x && x.valor && x.est ? x.valor : Infinity; };
+    vis = vis.slice().sort((a,b)=> (v(a)-v(b)) || (a.d-b.d));
+  }
   vis.forEach(p=>{
     const c = cor(COR[p.t]);
     const m = L.circleMarker(p.pos,{radius:p.t==="indep"?8:6,color:c,fillColor:c,
@@ -240,6 +300,8 @@ async function atualizar(){
     pop.querySelector("b").textContent = p.nome;
     pop.querySelector("span").textContent = p.end || "Endereço não informado";
     pop.append(`${metros(p)} · ${NOME[p.t]}`);
+    const pr = precoDe(p);
+    if (pr && pr.valor){ const a=document.createElement("div"); a.textContent = pr.est ? `${reais(pr.valor)} no site da rede` : "Esgotado no site"; pop.append(a); }
     if (p.aprox){ const a=document.createElement("div"); a.style.fontSize=".8em";
       a.textContent = AVISO[p.prec] + ".";
       pop.append(a); }
@@ -252,6 +314,13 @@ async function atualizar(){
     if (p.aprox) li.querySelector(".aprox").textContent = AVISO[p.prec];
     li.querySelector(".nome").textContent = p.nome;
     li.querySelector(".end").textContent = p.end || "Endereço não informado";
+    if (pr){ const d=document.createElement("div"); d.className="preco";
+      if (pr.valor){ const b=document.createElement("b"); b.textContent=reais(pr.valor); if(!pr.est) b.className="esg";
+        d.append(b, document.createTextNode(pr.est ? " no site, retire aqui" : " esgotado no site")); }
+      else { d.className="preco mutc"; d.textContent=pr.txt;
+        if (pr.link){ const a=document.createElement("a"); a.className="site"; a.href=pr.link; a.target="_blank"; a.rel="noopener";
+          a.textContent="Ver preço no site ›"; a.onclick=e=>e.stopPropagation(); d.append(" · ", a); } }
+      li.querySelector(".end").after(d); }
     const ir = li.querySelector("a.ir");
     ir.href = `https://www.google.com/maps/dir/?api=1&destination=${p.pos.join(",")}`;
     ir.onclick = e=>e.stopPropagation();
@@ -267,7 +336,7 @@ async function atualizar(){
   const R = raio>=1000 ? raio/1000+" km" : raio+" m";
   const QUAL = {todas:"farmácias", indep:"independentes", rede:"de rede", manip:"de manipulação"};
   document.getElementById("estado").textContent = vis.length
-    ? `${vis.length} ${vis.length===1 && filtro==="todas" ? "farmácia" : QUAL[filtro]} em ${R}, da mais próxima à mais distante.`
+    ? `${vis.length} ${vis.length===1 && filtro==="todas" ? "farmácia" : QUAL[filtro]} em ${R}, ${EAN && ordem==="preco" ? "do menor preço ao maior" : "da mais próxima à mais distante"}.`
     : (filtro==="todas" ? "Nenhuma farmácia cadastrada neste raio." : `Nenhuma ${filtro==="manip"?"de manipulação":QUAL[filtro].replace(/s$/,"")} neste raio. Aumente o raio ou toque em Todas.`);
 }
 
@@ -290,6 +359,13 @@ document.querySelectorAll(".filtros button").forEach(b=>{
   };
 });
 marcarFiltro();
+document.querySelectorAll(".ordem button").forEach(b=>{
+  b.onclick = ()=>{
+    ordem = b.dataset.o;
+    document.querySelectorAll(".ordem button").forEach(x=>x.setAttribute("aria-pressed", x===b ? "true" : "false"));
+    atualizar();
+  };
+});
 mapa.on("click", e=>{ centro=[e.latlng.lat,e.latlng.lng]; atualizar(); });
 const avisar = t => document.getElementById("estado").textContent = t;
 document.getElementById("btnLocal").onclick = ()=>{
@@ -313,7 +389,7 @@ async function buscarEnd(){
 document.getElementById("btnEnd").onclick=buscarEnd;
 document.getElementById("campoEnd").onkeydown=e=>{ if(e.key==="Enter") buscarEnd(); };
 
-atualizar();
+carregarPrecos().then(atualizar);
 </script>
 </body>
 </html>

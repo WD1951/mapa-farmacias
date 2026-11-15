@@ -47,11 +47,15 @@ li:last-child{border-bottom:0}
 .site .rede{color:var(--tinta)}
 a.caminho{display:inline-block;margin-top:6px;font-size:.85rem;font-weight:600;color:#fff;background:#0f8a6b;border-radius:10px;padding:7px 12px;text-decoration:none}
 a.caminho:hover,a.caminho:focus-visible{background:#0b6f56}
+a.caminho.perto{background:transparent;color:#0f8a6b;border:1.5px solid #0f8a6b;padding:5.5px 11px}
+a.caminho.perto:hover,a.caminho.perto:focus-visible{background:#e7f5f0}
+.melhor .acoes a.caminho.perto{animation:none}
 a.caminho .pino{width:1.1em;height:1.1em;vertical-align:-.18em;margin-right:5px}
 .acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .acoes a{margin:0}
-.melhor .acoes{flex-wrap:nowrap}
-.melhor .acoes a.caminho,.melhor .acoes a.whats{flex:1 1 auto;min-width:0;text-align:center;white-space:nowrap;font-size:.88rem;padding:10px 6px}
+.melhor .acoes{flex-wrap:wrap}
+.melhor .acoes a{flex:1 1 calc(50% - 4px)!important}
+.melhor .acoes a.caminho,.melhor .acoes a.whats{flex:1 1 auto;min-width:0;text-align:center;white-space:nowrap;font-size:.82rem;padding:10px 4px}
 @media (max-width:380px){.melhor .acoes a.caminho,.melhor .acoes a.whats{font-size:.8rem;padding:10px 4px}.melhor .acoes{gap:6px}}
 a.whats{display:inline-block;font-size:.95rem;font-weight:600;color:#0f8a6b;background:transparent;border:2px solid #0f8a6b;border-radius:10px;padding:8px 14px;text-decoration:none}
 a.whats:hover,a.whats:focus-visible{background:rgba(15,138,107,.1)}
@@ -207,6 +211,12 @@ function linkCaminho(r){
   a.href = `caminho.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}`;
   return a;
 }
+function linkPerto(r){
+  const a = el("a","caminho perto","Ver perto de mim");
+  const nome = `${nomeAmigavel(r)}, ${embalagem(r)} · ${rotuloTipo(r.tipo)} ${empresa(r.laboratorio)}`;
+  a.href = `mapa.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}`;
+  return a;
+}
 // envia o resultado ao WhatsApp da própria pessoa: quem envia é ela, nós não guardamos nada
 function linkWhats(texto){
   const a = el("a","whats","Enviar ao WhatsApp");
@@ -227,7 +237,7 @@ function item(r, marca){
     d.append(el("span","mut2", est ? " no site" : " no site (esgotado)"));
     esq.append(d);
   });
-  if (precosRede(r).length) esq.append(linkCaminho(r));
+  if (precosRede(r).length){ const ac = el("div","acoes"); ac.append(linkPerto(r), linkCaminho(r)); esq.append(ac); }
   esq.append(el("div","cmed", `${r.produto} ${r.apresentacao}`.replace(/\s+/g," ")));
   const dir = el("div","preco");
   dir.append(el("span","teto","teto da lei"));
@@ -258,6 +268,7 @@ function mostrar(termo){
     box.append(el("div",null, `${nomeAmigavel(m.r)}, ${embalagem(m.r)} (${reais(m.preco/m.q, m.preco/m.q<1?3:2)} por ${m.r.unidade})`));
     box.append(el("div","mut2", `Preço no site da rede: vale comprando pelo site ou app e retirando na loja, sem frete. No balcão pode ser outro. Lido em ${REDES_DATA}.`));
     const acoes = el("div","acoes"); box.append(acoes);
+    acoes.append(linkPerto(m.r));
     acoes.append(linkCaminho(m.r));
     acoes.append(linkWhats(
       `Medicamentos Baratos\n${nomeAmigavel(m.r)}, ${embalagem(m.r)}\n` +

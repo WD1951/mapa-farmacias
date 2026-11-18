@@ -298,7 +298,6 @@ function mostrar(termo){
   const estado = document.getElementById("estado");
   if (!res.length){ estado.textContent = `Nada encontrado para “${t}”. Confira a grafia ou tire a dose.`; return; }
   estado.textContent = `${res.length} apresentações para “${t}”.`;
-  saida.append(el("div","aviso","À direita, em cinza: o teto da lei (tabela CMED, São Paulo). Em negrito: o preço no site da rede, quando encontrado. Vale comprando pelo site ou app; no balcão pode ser outro."));
   const reais_ = res.flatMap(r => precosRede(r).filter(p=>p[3]).map(p => ({r, rede:p[0], preco:p[1], q: (r.pmc && r.pu) ? Math.round(r.pmc/r.pu) : null})))
                     .filter(x => x.q);
   if (reais_.length){

@@ -22,9 +22,15 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;
-  display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+  display:flex;flex-direction:column}
+.topo{background:#2CD3B6;color:#111;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topo .nomesite{color:#111;text-decoration:none;font-weight:800;font-size:1.05rem;display:inline-flex;align-items:center;gap:6px}
+.topo svg{width:1.1em;height:1.1em}
+.topo .lupa{width:40px;height:40px;border-radius:50%;background:rgba(17,17,17,.08);display:grid;place-items:center;color:#111;flex:none}
+.topo .lupa svg{width:22px;height:22px}
+.volta{color:var(--tinta);font-size:.95rem;font-weight:600;text-decoration:none;display:inline-block;margin-bottom:6px}
+
 header{padding:14px 18px 10px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
-.volta{color:var(--tinta);font-size:.9rem;display:inline-block;margin-bottom:4px}
 h1{font-size:1.35rem;font-weight:800;margin:0;letter-spacing:-.01em}
 .sub{color:var(--suave);font-size:.9rem;margin-top:2px}
 .raios{display:flex;gap:6px}
@@ -90,9 +96,10 @@ li:hover,li:focus{background:var(--bg);outline:none}
 </style>
 </head>
 <body>
+<div class="topo"><a class="nomesite" href="./"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg>Medicamentos Baratos</a><a class="lupa" href="busca.html?foco=1" aria-label="Buscar medicamento"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5 20 20"/></svg></a></div>
 <header>
   <div>
-    <a class="volta" href="./">← Início</a>
+    <a class="volta" id="voltaBusca" href="busca.html" hidden></a>
     <h1>Farmácias ao redor</h1>
     <div class="sub">Comece pela sua localização ou por um endereço. Também dá para tocar no mapa.</div>
     <div class="onde">
@@ -169,6 +176,9 @@ let centro = [-23.5614, -46.6559];
 let raio = 1000;
 const FILTROS = ["todas","indep","rede","manip"];
 // ---- remédio vindo da busca (mesma regra do "No meu caminho") ----
+// "Voltar para…": só aparece quando a pessoa veio de uma busca
+(function(){ const q = new URLSearchParams(location.search).get("q"), v = document.getElementById("voltaBusca");
+  if (q && v){ v.href = "busca.html?q=" + encodeURIComponent(q); v.textContent = "← Voltar para " + q; v.hidden = false; } })();
 const PARAM = new URLSearchParams(location.search);
 const EAN = (PARAM.get("ean")||"").replace(/\D/g,""), NOME_REMEDIO = PARAM.get("nome")||"";
 const SITE_REDE = [["Drogaria São Paulo", /drogaria sao paulo/], ["Pague Menos", /pague menos/]];

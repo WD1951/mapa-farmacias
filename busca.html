@@ -152,7 +152,7 @@ const semAcento = t => t.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowe
 const numeroDose = p => { const m = semAcento(p).match(new RegExp(`^(\\d+(?:[.,]\\d+)?)(?:${UNID})?$`));
   return m ? String(parseFloat(m[1].replace(",","."))) : null; };
 
-let ITENS = [];
+let ITENS = [], BUSCA_ATUAL = "";
 let REDES = {}, REDES_DATA = "";
 const eanLimpo = e => { e = String(e||"").replace(/\D/g,""); return e.length===14 && e[0]==="0" ? e.slice(1) : e; };
 const precosRede = r => (r.ean && REDES[r.ean]) ? REDES[r.ean].slice().sort((a,b)=>a[1]-b[1]) : [];
@@ -248,13 +248,13 @@ function linkCaminho(r){
   // alfinete desenhado na cor do texto do botão (branco sobre o verde), no lugar do emoji vermelho
   a.innerHTML = '<svg class="pino" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Ver no meu caminho';
   const nome = `${nomeAmigavel(r)}, ${embalagem(r)} · ${rotuloTipo(r.tipo)} ${empresa(r.laboratorio)}`;
-  a.href = `caminho.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}`;
+  a.href = `caminho.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}&q=${encodeURIComponent(BUSCA_ATUAL)}`;
   return a;
 }
 function linkPerto(r){
   const a = el("a","caminho perto","Ver perto de mim");
   const nome = `${nomeAmigavel(r)}, ${embalagem(r)} · ${rotuloTipo(r.tipo)} ${empresa(r.laboratorio)}`;
-  a.href = `mapa.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}`;
+  a.href = `mapa.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}&q=${encodeURIComponent(BUSCA_ATUAL)}`;
   return a;
 }
 // envia o resultado ao WhatsApp da própria pessoa: quem envia é ela, nós não guardamos nada
@@ -292,7 +292,7 @@ function item(r, marca){
 function mostrar(termo){
   const saida = document.getElementById("saida"); saida.innerHTML = "";
   const t = termo.trim(); if(!t) return;
-  guardarRecente(t); document.getElementById("recentes").hidden = true;
+  BUSCA_ATUAL = t; guardarRecente(t); document.getElementById("recentes").hidden = true;
   try { history.replaceState(null, "", "?q=" + encodeURIComponent(t)); } catch(e){}   // guarda a busca: ao voltar, ela reaparece
   const res = buscar(t);
   const estado = document.getElementById("estado");
@@ -342,7 +342,7 @@ fetch("precos_redes.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(
   const [a,m,dia] = d.atualizado.split("-");
   document.getElementById("estado").textContent = "Pronto. Digite o medicamento.";
   const q = new URLSearchParams(location.search).get("q");
-  if (q){ document.getElementById("termo").value = q; mostrar(q); } else mostrarRecentes();
+  if (q){ document.getElementById("termo").value = q; mostrar(q); } else { mostrarRecentes(); if (new URLSearchParams(location.search).has("foco")) document.getElementById("termo").focus(); }
   document.getElementById("rodape").textContent = `Tabela CMED da Anvisa, atualizada em ${dia}/${m}/${a}. ${ITENS.length.toLocaleString("pt-BR")} apresentações à venda.`;
 }).catch(()=>{ document.getElementById("estado").textContent = "A tabela ainda não foi gerada. Rode o robô CMED na aba Actions do GitHub."; });
 </script>

@@ -18,15 +18,29 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;
-  padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
-.casca{max-width:640px;margin:0 auto;padding:32px 18px 40px}
+  padding:0 0 env(safe-area-inset-bottom,0px)}
+.casca{max-width:640px;margin:0 auto;padding:22px 18px 40px}
 .marca{font-weight:800;font-size:1rem;color:var(--verde);margin:0 0 28px}
 h1{font-size:2rem;line-height:1.15;font-weight:800;margin:0 0 14px}
+.topo{background:#2CD3B6;color:#111;padding:14px 18px;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.topo a{color:#111;text-decoration:none;font-weight:800;font-size:1.05rem;display:inline-flex;align-items:center;gap:6px}
+.topo svg{width:1.1em;height:1.1em}
+h1.ajusta{display:block;white-space:nowrap;overflow:hidden}
+.recentes{margin:16px 0 0}
+.recentes .cab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.recentes .cab b{font-size:.95rem}
+.recentes .cab button{background:none;border:0;padding:0;color:var(--tinta);text-decoration:underline;font-size:.88rem;font-weight:400;cursor:pointer}
+.recentes ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.recentes a{display:flex;align-items:center;gap:10px;background:var(--painel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;color:var(--tinta);text-decoration:none;font-weight:600}
+.recentes a::before{content:"↺";color:var(--suave);font-weight:400}
+.recentes a::after{content:"›";margin-left:auto;color:var(--suave)}
+.recentes .priv{font-size:.8rem;color:var(--suave);margin:8px 0 0}
+
 form{display:flex;gap:8px}
 input{flex:1;min-width:0;font:inherit;font-size:1.1rem;padding:14px 16px;border-radius:12px;border:1px solid var(--linha);
   background:var(--painel);color:var(--tinta)}
-button{font:inherit;font-size:1.05rem;font-weight:600;padding:14px 20px;border-radius:12px;border:0;
-  background:var(--tinta);color:var(--painel);cursor:pointer}
+button{font:inherit;font-size:1.05rem;font-weight:800;padding:14px 20px;border-radius:12px;border:0;
+  background:#2CD3B6;color:#111;cursor:pointer}
 input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--verde);outline-offset:2px}
 .ou{margin:34px 0 12px;font-weight:600;color:var(--suave)}
 .caminhos{display:grid;gap:10px}
@@ -39,13 +53,18 @@ input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(-
 </style>
 </head>
 <body>
+<div class="topo"><a href="./"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg>Medicamentos Baratos</a></div>
 <div class="casca">
-  <p class="marca">Medicamentos Baratos</p>
-  <h1>Qual medicamento você procura?</h1>
+  <h1 class="ajusta">Qual medicamento você procura?</h1>
   <form action="busca.html">
     <input name="q" type="search" autocomplete="off" placeholder="Ex.: dipirona 500 comprimido" aria-label="Medicamento" required>
-    <button>Buscar</button>
+    <button>Comparar</button>
   </form>
+  <div class="recentes" id="recentes" hidden>
+    <div class="cab"><b>Suas buscas recentes</b><button type="button" id="apagar">Apagar</button></div>
+    <ul id="listaRecentes"></ul>
+    <p class="priv">Fica só neste celular. Ninguém mais vê.</p>
+  </div>
 
   <p class="ou">Ou encontre uma farmácia</p>
   <div class="caminhos">
@@ -55,5 +74,27 @@ input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(-
 
   <p class="rodape">Não vendemos medicamentos. Mostramos preços e farmácias para você escolher onde comprar, em rede ou independente.</p>
 </div>
+<script>
+// Buscas recentes: guardadas só neste aparelho, nada vai para o servidor
+const RECENTES_CHAVE = "mb_buscas", RECENTES_MAX = 5;
+function lerRecentes(){ try { return JSON.parse(localStorage.getItem(RECENTES_CHAVE)) || []; } catch(e){ return []; } }
+function guardarRecente(t){ t = (t||"").trim(); if(!t) return;
+  const l = [t, ...lerRecentes().filter(x => x.toLowerCase() !== t.toLowerCase())].slice(0, RECENTES_MAX);
+  try { localStorage.setItem(RECENTES_CHAVE, JSON.stringify(l)); } catch(e){} }
+function mostrarRecentes(){
+  const box = document.getElementById("recentes"), ul = document.getElementById("listaRecentes"), l = lerRecentes();
+  ul.innerHTML = ""; box.hidden = !l.length;
+  l.forEach(t => { const li = document.createElement("li"), a = document.createElement("a");
+    a.href = "busca.html?q=" + encodeURIComponent(t); a.textContent = t; li.append(a); ul.append(li); });
+}
+document.getElementById("apagar").onclick = () => { try { localStorage.removeItem(RECENTES_CHAVE); } catch(e){} mostrarRecentes(); };
+// A pergunta ocupa a largura da busca: termina junto com o botão
+function ajustarTitulo(){ const h = document.querySelector("h1.ajusta"), f = document.querySelector("form"); if(!h || !f) return;
+  h.style.fontSize = "32px"; const s = document.createElement("span"); s.textContent = h.textContent; s.style.whiteSpace = "nowrap";
+  h.textContent = ""; h.append(s); const r = f.clientWidth / s.offsetWidth; h.textContent = s.textContent;
+  h.style.fontSize = Math.max(18, Math.min(40, Math.floor(32 * r * 10) / 10)) + "px"; }
+ajustarTitulo(); addEventListener("resize", ajustarTitulo);
+mostrarRecentes();
+</script>
 </body>
 </html>

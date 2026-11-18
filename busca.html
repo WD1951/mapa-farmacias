@@ -19,18 +19,32 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;
-  padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+  padding:0 0 env(safe-area-inset-bottom,0px)}
 .casca{max-width:760px;margin:0 auto;padding:20px 16px 40px}
 h1{font-size:1.6rem;font-weight:800;margin:0 0 4px}
+.topo{background:#2CD3B6;color:#111;padding:14px 18px;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.topo a{color:#111;text-decoration:none;font-weight:800;font-size:1.05rem;display:inline-flex;align-items:center;gap:6px}
+.topo svg{width:1.1em;height:1.1em}
+h1.ajusta{display:block;white-space:nowrap;overflow:hidden}
+.recentes{margin:16px 0 0}
+.recentes .cab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.recentes .cab b{font-size:.95rem}
+.recentes .cab button{background:none;border:0;padding:0;color:var(--tinta);text-decoration:underline;font-size:.88rem;font-weight:400;cursor:pointer}
+.recentes ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.recentes a{display:flex;align-items:center;gap:10px;background:var(--painel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;color:var(--tinta);text-decoration:none;font-weight:600}
+.recentes a::before{content:"↺";color:var(--suave);font-weight:400}
+.recentes a::after{content:"›";margin-left:auto;color:var(--suave)}
+.recentes .priv{font-size:.8rem;color:var(--suave);margin:8px 0 0}
+
 .sub{color:var(--suave);font-size:.95rem;margin:0 0 16px}
 form{display:flex;gap:8px}
 input{flex:1;font:inherit;font-size:1.05rem;padding:12px 14px;border-radius:12px;border:1px solid var(--linha);
   background:var(--painel);color:var(--tinta);min-width:0}
-button{font:inherit;font-size:1rem;font-weight:600;padding:12px 18px;border-radius:12px;border:0;
-  background:var(--tinta);color:var(--painel);cursor:pointer}
-input:focus-visible,button:focus-visible{outline:3px solid var(--verde);outline-offset:2px}
+button{font:inherit;font-size:1rem;font-weight:800;padding:12px 18px;border-radius:12px;border:0;
+  background:#2CD3B6;color:#111;cursor:pointer}
+input:focus-visible,button:focus-visible{outline:3px solid var(--tinta);outline-offset:2px}
 .exemplos{font-size:.85rem;color:var(--suave);margin:10px 0 0}
-.exemplos a{color:var(--verde);cursor:pointer;text-decoration:underline}
+.exemplos a{color:var(--tinta);cursor:pointer;text-decoration:underline}
 #estado{margin:14px 0 6px;color:var(--suave)}
 .aviso{background:var(--fundo-aviso);color:var(--tinta);border-left:4px solid var(--aviso);
   padding:8px 12px;border-radius:8px;font-size:.9rem;margin:8px 0}
@@ -42,13 +56,13 @@ li:last-child{border-bottom:0}
 .nome{font-weight:600}
 .lab{font-size:.85rem;color:var(--suave)}
 .site{font-size:.9rem;margin-top:2px}
-.site b{color:var(--verde)}
+.site b{color:var(--tinta);font-weight:800}
 .site b.esg{color:var(--suave);font-weight:400;text-decoration:line-through}
 .site .rede{color:var(--tinta)}
-a.caminho{display:inline-block;margin-top:6px;font-size:.85rem;font-weight:600;color:#fff;background:#0f8a6b;border-radius:10px;padding:7px 12px;text-decoration:none}
-a.caminho:hover,a.caminho:focus-visible{background:#0b6f56}
-a.caminho.perto{background:transparent;color:#0f8a6b;border:1.5px solid #0f8a6b;padding:5.5px 11px}
-a.caminho.perto:hover,a.caminho.perto:focus-visible{background:#e7f5f0}
+a.caminho{display:inline-block;margin-top:6px;font-size:.85rem;font-weight:800;color:#111;background:#2CD3B6;border-radius:10px;padding:7px 12px;text-decoration:none}
+a.caminho:hover,a.caminho:focus-visible{background:#22bfa4}
+a.caminho.perto{background:transparent;color:var(--tinta);border:1.5px solid #2CD3B6;padding:5.5px 11px}
+a.caminho.perto:hover,a.caminho.perto:focus-visible{background:rgba(44,211,182,.15)}
 .melhor .acoes a.caminho.perto{animation:none}
 a.caminho .pino{width:1.1em;height:1.1em;vertical-align:-.18em;margin-right:5px}
 .acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -57,18 +71,18 @@ a.caminho .pino{width:1.1em;height:1.1em;vertical-align:-.18em;margin-right:5px}
 .melhor .acoes a{flex:1 1 calc(50% - 4px)!important}
 .melhor .acoes a.caminho,.melhor .acoes a.whats{flex:1 1 auto;min-width:0;text-align:center;white-space:nowrap;font-size:.82rem;padding:10px 4px}
 @media (max-width:380px){.melhor .acoes a.caminho,.melhor .acoes a.whats{font-size:.8rem;padding:10px 4px}.melhor .acoes{gap:6px}}
-a.whats{display:inline-block;font-size:.95rem;font-weight:600;color:#0f8a6b;background:transparent;border:2px solid #0f8a6b;border-radius:10px;padding:8px 14px;text-decoration:none}
+a.whats{display:inline-block;font-size:.95rem;font-weight:600;color:var(--tinta);background:transparent;border:2px solid #2CD3B6;border-radius:10px;padding:8px 14px;text-decoration:none}
 a.whats:hover,a.whats:focus-visible{background:rgba(15,138,107,.1)}
 .melhor a.caminho{font-size:.95rem;padding:10px 16px;animation:chama 1.2s ease-in-out 2}
 @keyframes chama{0%,100%{box-shadow:0 0 0 0 rgba(15,138,107,.5)}50%{box-shadow:0 0 0 10px rgba(15,138,107,0)}}
 @media (prefers-reduced-motion:reduce){.melhor a.caminho{animation:none}}
 .mut2{color:var(--suave);font-size:.8rem}
-.melhor{background:var(--painel);border:2px solid var(--verde);border-radius:12px;padding:10px 12px;margin:10px 0}
-.melhor b{color:var(--verde);font-size:1.2rem}
+.melhor{background:var(--painel);border:2px solid #2CD3B6;border-radius:12px;padding:10px 12px;margin:10px 0}
+.melhor b{color:var(--tinta);font-weight:800;font-size:1.2rem}
 .cmed{font-size:.72rem;color:var(--suave);opacity:.8;margin-top:2px}
 .tipos{font-size:.88rem;color:var(--suave);margin:6px 0 0;line-height:1.45}
 .tipos b{color:var(--tinta)}
-.tipos summary{cursor:pointer;color:var(--verde);font-weight:600}
+.tipos summary{cursor:pointer;color:var(--tinta);font-weight:600;text-decoration:underline}
 .preco{text-align:right;max-width:104px}
 .preco b{display:block;font-size:1rem;color:var(--suave);font-weight:600}
 .preco .teto{font-size:.75rem;color:var(--suave)}
@@ -82,19 +96,45 @@ li.ref{background:var(--bg)}
 </style>
 </head>
 <body>
+<div class="topo"><a href="./"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg>Medicamentos Baratos</a></div>
 <div class="casca">
-  <p class="volta"><a href="./">← Início</a></p>
-  <h1>Qual medicamento você procura?</h1>
+  <h1 class="ajusta">Qual medicamento você procura?</h1>
   <p class="sub">Digite o nome e a dose. Primeiro aparecem as opções com preço real encontrado, da mais barata para a mais cara.</p>
   <form id="form">
     <input id="termo" type="search" autocomplete="off" placeholder="Ex.: dipirona 500 comprimido" aria-label="Medicamento">
-    <button>Buscar</button>
+    <button>Comparar</button>
   </form>
+  <div class="recentes" id="recentes" hidden>
+    <div class="cab"><b>Suas buscas recentes</b><button type="button" id="apagar">Apagar</button></div>
+    <ul id="listaRecentes"></ul>
+    <p class="priv">Fica só neste celular. Ninguém mais vê.</p>
+  </div>
   <p class="exemplos">Exemplos: <a data-t="dipirona 500 comprimido">dipirona 500 comprimido</a>, <a data-t="losartana 50">losartana 50</a></p>
   <div id="estado">Carregando a tabela de preços…</div>
   <div id="saida"></div>
   <p class="rodape" id="rodape"></p>
 </div>
+<script>
+// Buscas recentes: guardadas só neste aparelho, nada vai para o servidor
+const RECENTES_CHAVE = "mb_buscas", RECENTES_MAX = 5;
+function lerRecentes(){ try { return JSON.parse(localStorage.getItem(RECENTES_CHAVE)) || []; } catch(e){ return []; } }
+function guardarRecente(t){ t = (t||"").trim(); if(!t) return;
+  const l = [t, ...lerRecentes().filter(x => x.toLowerCase() !== t.toLowerCase())].slice(0, RECENTES_MAX);
+  try { localStorage.setItem(RECENTES_CHAVE, JSON.stringify(l)); } catch(e){} }
+function mostrarRecentes(){
+  const box = document.getElementById("recentes"), ul = document.getElementById("listaRecentes"), l = lerRecentes();
+  ul.innerHTML = ""; box.hidden = !l.length;
+  l.forEach(t => { const li = document.createElement("li"), a = document.createElement("a");
+    a.href = "busca.html?q=" + encodeURIComponent(t); a.textContent = t; li.append(a); ul.append(li); });
+}
+document.getElementById("apagar").onclick = () => { try { localStorage.removeItem(RECENTES_CHAVE); } catch(e){} mostrarRecentes(); };
+// A pergunta ocupa a largura da busca: termina junto com o botão
+function ajustarTitulo(){ const h = document.querySelector("h1.ajusta"), f = document.querySelector("form"); if(!h || !f) return;
+  h.style.fontSize = "32px"; const s = document.createElement("span"); s.textContent = h.textContent; s.style.whiteSpace = "nowrap";
+  h.textContent = ""; h.append(s); const r = f.clientWidth / s.offsetWidth; h.textContent = s.textContent;
+  h.style.fontSize = Math.max(18, Math.min(40, Math.floor(32 * r * 10) / 10)) + "px"; }
+ajustarTitulo(); addEventListener("resize", ajustarTitulo);
+</script>
 <script>
 // Como as pessoas falam -> como a tabela da CMED escreve
 const SINONIMOS = {comprimido:"com",comprimidos:"com",comp:"com",capsula:"cap",capsulas:"cap",
@@ -252,12 +292,13 @@ function item(r, marca){
 function mostrar(termo){
   const saida = document.getElementById("saida"); saida.innerHTML = "";
   const t = termo.trim(); if(!t) return;
+  guardarRecente(t); document.getElementById("recentes").hidden = true;
   try { history.replaceState(null, "", "?q=" + encodeURIComponent(t)); } catch(e){}   // guarda a busca: ao voltar, ela reaparece
   const res = buscar(t);
   const estado = document.getElementById("estado");
   if (!res.length){ estado.textContent = `Nada encontrado para “${t}”. Confira a grafia ou tire a dose.`; return; }
   estado.textContent = `${res.length} apresentações para “${t}”.`;
-  saida.append(el("div","aviso","À direita, em cinza: o teto da lei (tabela CMED, São Paulo). Em verde: o preço no site da rede, quando encontrado. Vale comprando pelo site ou app; no balcão pode ser outro."));
+  saida.append(el("div","aviso","À direita, em cinza: o teto da lei (tabela CMED, São Paulo). Em negrito: o preço no site da rede, quando encontrado. Vale comprando pelo site ou app; no balcão pode ser outro."));
   const reais_ = res.flatMap(r => precosRede(r).filter(p=>p[3]).map(p => ({r, rede:p[0], preco:p[1], q: (r.pmc && r.pu) ? Math.round(r.pmc/r.pu) : null})))
                     .filter(x => x.q);
   if (reais_.length){
@@ -270,11 +311,6 @@ function mostrar(termo){
     const acoes = el("div","acoes"); box.append(acoes);
     acoes.append(linkPerto(m.r));
     acoes.append(linkCaminho(m.r));
-    acoes.append(linkWhats(
-      `Medicamentos Baratos\n${nomeAmigavel(m.r)}, ${embalagem(m.r)}\n` +
-      `${reais(m.preco)} na ${m.rede} (preço no site da rede; retire na loja)\n` +
-      `Preço lido em ${REDES_DATA}. No balcão pode ser outro.\n` +
-      `Ver de novo: ${location.origin}${location.pathname}?q=${encodeURIComponent(t)}`));
     saida.append(box);
   }
   const nomes = res.map(r=>semAcento(r.substancia+" "+r.produto).toUpperCase()).join(" ");
@@ -295,6 +331,7 @@ function mostrar(termo){
   }
 }
 
+document.getElementById("termo").addEventListener("input", e => { if(!e.target.value.trim() && !document.getElementById("saida").childElementCount) mostrarRecentes(); else document.getElementById("recentes").hidden = true; });
 document.getElementById("form").onsubmit = e => { e.preventDefault(); mostrar(document.getElementById("termo").value); };
 document.querySelectorAll(".exemplos a").forEach(a=>a.onclick=()=>{ document.getElementById("termo").value=a.dataset.t; mostrar(a.dataset.t); });
 
@@ -306,7 +343,7 @@ fetch("precos_redes.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(
   const [a,m,dia] = d.atualizado.split("-");
   document.getElementById("estado").textContent = "Pronto. Digite o medicamento.";
   const q = new URLSearchParams(location.search).get("q");
-  if (q){ document.getElementById("termo").value = q; mostrar(q); }
+  if (q){ document.getElementById("termo").value = q; mostrar(q); } else mostrarRecentes();
   document.getElementById("rodape").textContent = `Tabela CMED da Anvisa, atualizada em ${dia}/${m}/${a}. ${ITENS.length.toLocaleString("pt-BR")} apresentações à venda.`;
 }).catch(()=>{ document.getElementById("estado").textContent = "A tabela ainda não foi gerada. Rode o robô CMED na aba Actions do GitHub."; });
 </script>

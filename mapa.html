@@ -12,12 +12,12 @@
 <style>
 :root{
   --bg:#eef1f3; --painel:#ffffff; --tinta:#16232e; --suave:#5b6a76; --linha:#d5dce1;
-  --indep:#0f8a6b; --rede:#8b97a1; --outro:#c98a12; --manip:#7b5cc4; --raio:#16232e;
+  --indep:#0f8a6b; --rede:#e5484d; --outro:#c98a12; --manip:#7b5cc4; --raio:#16232e;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
   :root{ --bg:#10171d; --painel:#18222a; --tinta:#e6edf1; --suave:#93a3ae; --linha:#2a3742;
-         --indep:#35c39b; --rede:#6d7c87; --outro:#e0a83a; --manip:#a48be6; --raio:#e6edf1; color-scheme:dark; }
+         --indep:#35c39b; --rede:#ff6b6b; --outro:#e0a83a; --manip:#a48be6; --raio:#e6edf1; color-scheme:dark; }
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -333,7 +333,7 @@ async function atualizar(){
     const ir = li.querySelector("a.ir");
     ir.href = `https://www.google.com/maps/dir/?api=1&destination=${p.pos.join(",")}`;
     ir.onclick = e=>e.stopPropagation();
-    li.onclick = ()=>{ mapa.setView(p.pos,17); m.openPopup(); };
+    li.onclick = ()=>{ document.getElementById("mapa").scrollIntoView({behavior:"smooth",block:"start"}); mapa.setView(p.pos,17); m.openPopup(); };
     li.onkeydown = e=>{ if(e.key==="Enter") li.onclick(); };
     lista.appendChild(li);
   });

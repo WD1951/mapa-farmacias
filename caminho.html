@@ -11,12 +11,12 @@
 <style>
 :root{
   --bg:#eef1f3; --painel:#ffffff; --tinta:#16232e; --suave:#5b6a76; --linha:#d5dce1;
-  --indep:#0f8a6b; --rede:#8b97a1; --rota:#1d5fd1; --aviso:#c98a12;
+  --indep:#0f8a6b; --rede:#e5484d; --rota:#1d5fd1; --aviso:#c98a12;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
   :root{ --bg:#10171d; --painel:#18222a; --tinta:#e6edf1; --suave:#93a3ae; --linha:#2a3742;
-         --indep:#35c39b; --rede:#6d7c87; --rota:#6fa0ff; --aviso:#e0a83a; color-scheme:dark; }
+         --indep:#35c39b; --rede:#ff6b6b; --rota:#6fa0ff; --aviso:#e0a83a; color-scheme:dark; }
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -354,7 +354,7 @@ function desenharLista(){
     li.querySelector(".end").textContent=f.end||"Endereço não informado";
     li.querySelector("a.ir").href=linkIr(f);
     li.querySelector("a.ir").onclick=e=>e.stopPropagation();
-    li.onclick=()=>{ mapa.setView(f.pos,17); m.openPopup();
+    li.onclick=()=>{ document.getElementById("mapa").scrollIntoView({behavior:"smooth",block:"start"}); mapa.setView(f.pos,17); m.openPopup();
  };
     ul.appendChild(li);
   });

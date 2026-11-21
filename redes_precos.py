@@ -12,6 +12,8 @@ from zoneinfo import ZoneInfo
 REDES = {
     "Drogaria São Paulo": "https://www.drogariasaopaulo.com.br",
     "Pague Menos": "https://www.paguemenos.com.br",
+    "Farma Conde": "https://www.farmaconde.com.br",
+    "Extrafarma": "https://www.extrafarma.com.br",
 }
 
 # Cesta: como as pessoas procuram. Para incluir um remédio, acrescente uma linha.

@@ -181,7 +181,7 @@ const FILTROS = ["todas","indep","rede","manip"];
   if (q && v){ v.href = "busca.html?q=" + encodeURIComponent(q); v.textContent = "← Voltar para " + q; v.hidden = false; } })();
 const PARAM = new URLSearchParams(location.search);
 const EAN = (PARAM.get("ean")||"").replace(/\D/g,""), NOME_REMEDIO = PARAM.get("nome")||"";
-const SITE_REDE = [["Drogaria São Paulo", /drogaria sao paulo/], ["Pague Menos", /pague menos/]];
+const SITE_REDE = [["Drogaria São Paulo", /drogaria sao paulo/], ["Pague Menos", /pague menos/], ["Farma Conde", /farma ?conde/], ["Extrafarma", /extra ?farma/]];
 // redes que bloqueiam o robô: o preço é visto no site, pelo celular da pessoa
 const SITE_BUSCA = [
   [/drogasil/, "https://www.drogasil.com.br/search?w="],

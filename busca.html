@@ -93,6 +93,10 @@ li.ref{background:var(--bg)}
 .volta{margin:0 0 12px;font-size:.9rem}
 .volta a{color:var(--verde)}
 .rodape{margin-top:30px;font-size:.8rem;color:var(--suave)}
+button.cesta{font:inherit;font-size:.85rem;font-weight:800;cursor:pointer;margin-top:6px;background:transparent;color:var(--tinta);border:1.5px solid #2CD3B6;border-radius:10px;padding:5.5px 11px}
+button.cesta[aria-pressed="true"]{background:#2CD3B6;color:#111}
+.melhor .acoes button.cesta{flex:1 1 100%;padding:10px 4px}
+.atalho-cesta{display:inline-block;color:var(--tinta);font-weight:700;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -104,6 +108,7 @@ li.ref{background:var(--bg)}
     <input id="termo" type="search" autocomplete="off" placeholder="Ex.: dipirona 500 comprimido" aria-label="Medicamento">
     <button>Comparar</button>
   </form>
+  <p style="margin:12px 0 0"><a id="atalhoCesta" class="atalho-cesta" href="cesta.html" hidden></a></p>
   <div class="recentes" id="recentes" hidden>
     <div class="cab"><b>Suas buscas recentes</b><button type="button" id="apagar">Apagar</button></div>
     <ul id="listaRecentes"></ul>
@@ -155,7 +160,8 @@ const numeroDose = p => { const m = semAcento(p).match(new RegExp(`^(\\d+(?:[.,]
 let ITENS = [], BUSCA_ATUAL = "";
 let REDES = {}, REDES_DATA = "";
 const eanLimpo = e => { e = String(e||"").replace(/\D/g,""); return e.length===14 && e[0]==="0" ? e.slice(1) : e; };
-const precosRede = r => (r.ean && REDES[r.ean]) ? REDES[r.ean].slice().sort((a,b)=>a[1]-b[1]) : [];
+// preço acima do teto da CMED é erro de leitura ou cobrança ilegal: não aparece
+const precosRede = r => (r.ean && REDES[r.ean]) ? REDES[r.ean].filter(x => !r.pmc || x[1] <= r.pmc*1.001).sort((a,b)=>a[1]-b[1]) : [];
 function preparar(dados){
   const c = Object.fromEntries(dados.colunas.map((n,i)=>[n,i]));
   ITENS = dados.itens.map(l=>{
@@ -248,13 +254,31 @@ function linkCaminho(r){
   // alfinete desenhado na cor do texto do botão (branco sobre o verde), no lugar do emoji vermelho
   a.innerHTML = '<svg class="pino" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Ver no meu caminho';
   const nome = `${nomeAmigavel(r)}, ${embalagem(r)} · ${rotuloTipo(r.tipo)} ${empresa(r.laboratorio)}`;
-  a.href = `caminho.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}&q=${encodeURIComponent(BUSCA_ATUAL)}`;
+  a.href = `caminho.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}&q=${encodeURIComponent(BUSCA_ATUAL)}&teto=${r.pmc||""}`;
   return a;
+}
+// Minha cesta: guardada só neste aparelho, como as buscas recentes
+const CESTA_CHAVE = "mb_cesta", CESTA_MAX = 10;
+function lerCesta(){ try { return JSON.parse(localStorage.getItem(CESTA_CHAVE)) || []; } catch(e){ return []; } }
+function gravarCesta(l){ try { localStorage.setItem(CESTA_CHAVE, JSON.stringify(l)); } catch(e){} atalhoCesta(); }
+function atalhoCesta(){ const n = lerCesta().length, a = document.getElementById("atalhoCesta"); if(!a) return;
+  a.hidden = !n; a.textContent = `Minha cesta (${n}) · ver o total ›`; }
+function botaoCesta(r){
+  const b = el("button","caminho perto cesta"); b.type = "button";
+  const nome = `${nomeAmigavel(r)}, ${embalagem(r)} · ${rotuloTipo(r.tipo)} ${empresa(r.laboratorio)}`;
+  const tem = () => lerCesta().some(x => x.ean === r.ean);
+  const pinta = () => { b.textContent = tem() ? "✓ Na cesta" : "+ Minha cesta"; b.setAttribute("aria-pressed", tem()); };
+  b.onclick = () => { let l = lerCesta();
+    if (tem()) l = l.filter(x => x.ean !== r.ean);
+    else { if (l.length >= CESTA_MAX) { alert(`A cesta guarda até ${CESTA_MAX} medicamentos.`); return; } l.push({ean:r.ean, nome, pmc:r.pmc||null}); }
+    gravarCesta(l); document.querySelectorAll("button.cesta").forEach(x => x.dispatchEvent(new Event("pinta"))); };
+  b.addEventListener("pinta", pinta); pinta();
+  return b;
 }
 function linkPerto(r){
   const a = el("a","caminho perto","Ver perto de mim");
   const nome = `${nomeAmigavel(r)}, ${embalagem(r)} · ${rotuloTipo(r.tipo)} ${empresa(r.laboratorio)}`;
-  a.href = `mapa.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}&q=${encodeURIComponent(BUSCA_ATUAL)}`;
+  a.href = `mapa.html?ean=${r.ean}&nome=${encodeURIComponent(nome)}&q=${encodeURIComponent(BUSCA_ATUAL)}&teto=${r.pmc||""}`;
   return a;
 }
 // envia o resultado ao WhatsApp da própria pessoa: quem envia é ela, nós não guardamos nada
@@ -277,7 +301,7 @@ function item(r, marca){
     d.append(el("span","mut2", est ? " no site" : " no site (esgotado)"));
     esq.append(d);
   });
-  if (precosRede(r).length){ const ac = el("div","acoes"); ac.append(linkPerto(r), linkCaminho(r)); esq.append(ac); }
+  if (precosRede(r).length){ const ac = el("div","acoes"); ac.append(linkPerto(r), linkCaminho(r), botaoCesta(r)); esq.append(ac); }
   esq.append(el("div","cmed", `${r.produto} ${r.apresentacao}`.replace(/\s+/g," ")));
   const dir = el("div","preco");
   dir.append(el("span","teto","teto da lei"));
@@ -310,6 +334,7 @@ function mostrar(termo){
     const acoes = el("div","acoes"); box.append(acoes);
     acoes.append(linkPerto(m.r));
     acoes.append(linkCaminho(m.r));
+    acoes.append(botaoCesta(m.r));
     saida.append(box);
   }
   const nomes = res.map(r=>semAcento(r.substancia+" "+r.produto).toUpperCase()).join(" ");
@@ -339,6 +364,7 @@ fetch("precos_redes.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).catch(
   return fetch("precos.json",{cache:"no-cache"});
 }).then(r=>{ if(!r.ok) throw 0; return r.json(); }).then(d=>{
   preparar(d);
+  atalhoCesta();
   const [a,m,dia] = d.atualizado.split("-");
   document.getElementById("estado").textContent = "Pronto. Digite o medicamento.";
   const q = new URLSearchParams(location.search).get("q");

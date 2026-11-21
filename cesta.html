@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Minha cesta — Medicamentos Baratos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f3;--painel:#fff;--tinta:#16232e;--suave:#5b6a76;--linha:#d5dce1;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#10171d;--painel:#18222a;--tinta:#e6edf1;--suave:#93a3ae;--linha:#2a3742;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif;padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+.topo{background:#2CD3B6;color:#111;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topo .nomesite{color:#111;text-decoration:none;font-weight:800;font-size:1.05rem;display:inline-flex;align-items:center;gap:6px}
+.topo svg{width:1.1em;height:1.1em}
+.topo .lupa{width:40px;height:40px;border-radius:50%;background:rgba(17,17,17,.08);display:grid;place-items:center;color:#111}
+.topo .lupa svg{width:22px;height:22px}
+.casca{max-width:640px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.6rem;font-weight:800;margin:0 0 4px}
+.sub{color:var(--suave);font-size:.95rem;margin:0 0 16px;line-height:1.45}
+ul{list-style:none;margin:0;padding:0;background:var(--painel);border:1px solid var(--linha);border-radius:12px;overflow:hidden}
+li{padding:10px 12px;border-bottom:1px solid var(--linha);display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:start}
+li:last-child{border-bottom:0}
+.nome{font-weight:600;font-size:.95rem}
+.det{font-size:.82rem;color:var(--suave)}
+.tirar{background:none;border:0;color:var(--suave);font:inherit;font-size:1.3rem;line-height:1;cursor:pointer;padding:2px 6px}
+h2{font-size:1.15rem;font-weight:800;margin:22px 0 8px}
+.total{background:var(--painel);border:1px solid var(--linha);border-radius:12px;padding:12px 14px;margin:0 0 10px}
+.total.melhor{border:2px solid #2CD3B6}
+.total .lin{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.total b{font-size:1.3rem;font-weight:800;white-space:nowrap}
+.total .rot{font-weight:700}
+.total .obs{font-size:.82rem;color:var(--suave);margin-top:4px;line-height:1.4}
+.divisao{font-size:.85rem;margin:8px 0 0;padding:0;list-style:none;border:0;background:none}
+.divisao li{display:block;padding:3px 0;border:0}
+.vazio{background:var(--painel);border:1px solid var(--linha);border-radius:12px;padding:16px;line-height:1.5}
+.vazio a,.rodape a{color:var(--tinta);font-weight:700}
+.rodape{margin-top:24px;font-size:.8rem;color:var(--suave);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="topo"><a class="nomesite" href="./"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg>Medicamentos Baratos</a><a class="lupa" href="busca.html?foco=1" aria-label="Buscar medicamento"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5 20 20"/></svg></a></div>
+<div class="casca">
+  <h1>Minha cesta</h1>
+  <p class="sub">O total da sua compra em cada rede, e quanto fica dividindo entre elas. Você decide onde comprar.</p>
+  <div id="vazio" class="vazio" hidden>Sua cesta está vazia. Na <a href="busca.html?foco=1">busca</a>, toque em “+ Minha cesta” nos medicamentos que você compra todo mês.</div>
+  <ul id="itens" hidden></ul>
+  <div id="totais"></div>
+  <p class="rodape" id="rodape"></p>
+</div>
+<script>
+const CESTA_CHAVE = "mb_cesta";
+function lerCesta(){ try { return JSON.parse(localStorage.getItem(CESTA_CHAVE)) || []; } catch(e){ return []; } }
+function gravarCesta(l){ try { localStorage.setItem(CESTA_CHAVE, JSON.stringify(l)); } catch(e){} }
+const reais = v => "R$ " + v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+function el(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+let REDES = {}, DATA = "";
+
+// preço válido: em estoque e dentro do teto da CMED
+function precos(item){ return (REDES[item.ean]||[]).filter(p => p[3] && (!item.pmc || p[1] <= item.pmc*1.001)); }
+
+function desenhar(){
+  const cesta = lerCesta(), ul = document.getElementById("itens"), tot = document.getElementById("totais");
+  ul.innerHTML = ""; tot.innerHTML = "";
+  document.getElementById("vazio").hidden = !!cesta.length; ul.hidden = !cesta.length;
+  if (!cesta.length) return;
+  cesta.forEach(it => {
+    const li = el("li"), esq = el("div");
+    esq.append(el("div","nome", it.nome.split(" · ")[0]), el("div","det", it.nome.split(" · ").slice(1).join(" · ")));
+    const ps = precos(it); if (!ps.length) esq.append(el("div","det","Sem preço nas redes hoje."));
+    const x = el("button","tirar","×"); x.setAttribute("aria-label","Tirar da cesta");
+    x.onclick = () => { gravarCesta(lerCesta().filter(y => y.ean !== it.ean)); desenhar(); };
+    li.append(esq, x); ul.append(li);
+  });
+  // total em cada rede
+  const redes = [...new Set(cesta.flatMap(it => precos(it).map(p => p[0])))];
+  const linhas = redes.map(rede => {
+    let soma = 0, faltam = 0;
+    cesta.forEach(it => { const p = precos(it).find(p => p[0] === rede); if (p) soma += p[1]; else faltam++; });
+    return {rede, soma, faltam};
+  }).sort((a,b) => (a.faltam - b.faltam) || (a.soma - b.soma));
+  // dividindo: cada item na rede mais barata
+  let somaDiv = 0, semPreco = 0; const onde = [];
+  cesta.forEach(it => { const ps = precos(it).sort((a,b) => a[1]-b[1]);
+    if (ps.length){ somaDiv += ps[0][1]; onde.push([it.nome.split(" · ")[0], ps[0][0], ps[0][1]]); } else semPreco++; });
+  const completas = linhas.filter(l => !l.faltam);
+  const melhorUnica = completas.length ? completas[0].soma : null;
+
+  tot.append(el("h2",null,"Tudo numa rede só"));
+  if (!linhas.length) tot.append(el("div","total", "Nenhum item da cesta tem preço nas redes hoje."));
+  linhas.forEach((l,i) => {
+    const c = el("div", "total" + (i===0 && !l.faltam ? " melhor" : "")), lin = el("div","lin");
+    lin.append(el("span","rot", l.rede), el("b",null, reais(l.soma))); c.append(lin);
+    if (l.faltam) c.append(el("div","obs", `Não tem ${l.faltam} ${l.faltam===1?"item":"itens"} da cesta; o total não inclui ${l.faltam===1?"esse item":"esses itens"}.`));
+    else c.append(el("div","obs", "Tem todos os itens da cesta."));
+    tot.append(c);
+  });
+  if (redes.length > 1 && onde.length){
+    tot.append(el("h2",null,"Dividindo entre as redes"));
+    const c = el("div","total"), lin = el("div","lin");
+    lin.append(el("span","rot","Cada item onde é mais barato"), el("b",null, reais(somaDiv))); c.append(lin);
+    if (melhorUnica != null && !semPreco){
+      const dif = melhorUnica - somaDiv;
+      c.append(el("div","obs", dif > 0.009 ? `Economia de ${reais(dif)} em relação a comprar tudo na rede mais barata. Em troca, são duas compras.` : "Não compensa dividir: comprar tudo numa rede sai pelo mesmo preço."));
+    }
+    const d = el("ul","divisao"); onde.forEach(([n,r,p]) => d.append(el("li",null, `${n}: ${r}, ${reais(p)}`))); c.append(d);
+    tot.append(c);
+  }
+}
+
+fetch("precos_redes.json",{cache:"no-cache"}).then(r => r.ok ? r.json() : null).catch(() => null).then(x => {
+  if (x && x.precos){ REDES = x.precos; const [dt,hr] = x.atualizado.split("T"); const [a,m,d] = dt.split("-"); DATA = `${d}/${m} às ${hr.replace(":","h")}`; }
+  document.getElementById("rodape").textContent = `Preço no site de cada rede${DATA ? ", lido em " + DATA : ""}: vale comprando pelo site ou app e retirando na loja. No balcão pode ser outro. As farmácias independentes entram aqui quando enviarem seus preços. A cesta fica só neste celular.`;
+  desenhar();
+});
+</script>
+</body>
+</html>

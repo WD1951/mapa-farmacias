@@ -60,6 +60,7 @@ input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(-
     <input name="q" type="search" autocomplete="off" placeholder="Ex.: dipirona 500 comprimido" aria-label="Medicamento" required>
     <button>Comparar</button>
   </form>
+  <p style="margin:12px 0 0"><a id="atalhoCesta" href="cesta.html" hidden style="color:var(--tinta);font-weight:700;text-decoration:underline"></a></p>
   <div class="recentes" id="recentes" hidden>
     <div class="cab"><b>Suas buscas recentes</b><button type="button" id="apagar">Apagar</button></div>
     <ul id="listaRecentes"></ul>
@@ -95,6 +96,8 @@ function ajustarTitulo(){ const h = document.querySelector("h1.ajusta"), f = doc
   h.style.fontSize = Math.max(18, Math.min(40, Math.floor(32 * r * 10) / 10)) + "px"; }
 ajustarTitulo(); addEventListener("resize", ajustarTitulo);
 mostrarRecentes();
+(function(){ let n=0; try { n=(JSON.parse(localStorage.getItem("mb_cesta"))||[]).length; } catch(e){}
+  const a=document.getElementById("atalhoCesta"); if(n){ a.hidden=false; a.textContent=`Minha cesta (${n}) · ver o total ›`; } })();
 </script>
 </body>
 </html>

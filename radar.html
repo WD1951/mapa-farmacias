@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Radar — Medicamentos Baratos</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f3;--painel:#fff;--tinta:#16232e;--suave:#5b6a76;--linha:#d5dce1;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#10171d;--painel:#18222a;--tinta:#e6edf1;--suave:#93a3ae;--linha:#2a3742;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tinta);font-family:"Archivo",system-ui,-apple-system,sans-serif}
+[hidden]{display:none!important}
+.topo{background:#2CD3B6;color:#111;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.topo a{color:#111;text-decoration:none;font-weight:800;font-size:1.05rem}
+.casca{max-width:640px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.6rem;font-weight:800;margin:0 0 4px}
+.sub{color:var(--suave);font-size:.92rem;margin:0 0 16px;line-height:1.45}
+form,.botoes{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+input{font:inherit;font-size:1rem;padding:11px 12px;border:1px solid var(--linha);border-radius:12px;background:var(--painel);color:var(--tinta);flex:1;min-width:0}
+button{font:inherit;font-size:.95rem;font-weight:800;padding:11px 14px;border-radius:12px;border:0;background:#2CD3B6;color:#111;cursor:pointer}
+button.sec{background:transparent;color:var(--tinta);border:1.5px solid #2CD3B6}
+button[aria-pressed="true"]{background:#2CD3B6;color:#111}
+.resumo{font-size:.9rem;color:var(--suave);margin:0 0 10px}
+ul{list-style:none;margin:0;padding:0;background:var(--painel);border:1px solid var(--linha);border-radius:12px;overflow:hidden}
+li{padding:10px 12px;border-bottom:1px solid var(--linha);display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+li:last-child{border-bottom:0}
+.nome{font-weight:600;font-size:.95rem}
+.det{font-size:.8rem;color:var(--suave)}
+.num{text-align:right;font-weight:800;white-space:nowrap}
+.falta{font-size:.8rem;font-weight:600;color:var(--tinta)}
+.vazio,.erro{background:var(--painel);border:1px solid var(--linha);border-radius:12px;padding:14px;line-height:1.5}
+.rodape{margin-top:20px;font-size:.8rem;color:var(--suave);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="topo"><a href="./">+ Medicamentos Baratos</a></div>
+<div class="casca">
+  <h1>Radar</h1>
+  <p class="sub">O que as pessoas procuram e onde não encontram preço de farmácia independente. Números reais, contados de forma anônima.</p>
+
+  <form id="formChave">
+    <input id="chave" type="password" placeholder="Sua senha do Radar" autocomplete="current-password">
+    <button>Entrar</button>
+  </form>
+
+  <div id="painel" hidden>
+    <div class="botoes">
+      <button type="button" class="sec" data-dias="7" aria-pressed="true">7 dias</button>
+      <button type="button" class="sec" data-dias="30">30 dias</button>
+      <button type="button" class="sec" id="btnRegiao">Perto de mim</button>
+      <button type="button" class="sec" id="btnCidade" hidden>Cidade toda</button>
+      <button type="button" class="sec" id="sair">Sair</button>
+    </div>
+    <p class="resumo" id="resumo"></p>
+    <ul id="itens"></ul>
+    <div class="vazio" id="vazio" hidden>Ainda não há remédio com 3 buscas ou mais neste período. O Radar só mostra um remédio a partir de 3 buscas, para ninguém ser identificado por uma busca isolada.</div>
+  </div>
+  <div class="erro" id="erro" hidden></div>
+  <p class="rodape">As buscas são contadas quando alguém usa “Perto de mim” ou “No meu caminho” com um remédio escolhido. O Radar guarda só o dia, o remédio, um quadradinho do mapa de cerca de 1 km e se havia independente com preço por perto. Nada de nome, telefone ou endereço.</p>
+</div>
+<script>
+const RADAR = "https://radar.wdurant51.workers.dev";
+let CHAVE = "", DIAS = 7, GH = "", NOMES = null;
+try { CHAVE = localStorage.getItem("mb_radar_chave") || ""; } catch(e){}
+
+function gh6(la, lo){ const B="0123456789bcdefghjkmnpqrstuvwxyz"; let lat=[-90,90], lon=[-180,180], par=true, g="", bits=0, v=0;
+  while(g.length<6){ const f=par?lon:lat, x=par?lo:la, m=(f[0]+f[1])/2; if(x>=m){v=(v<<1)|1;f[0]=m;}else{v=v<<1;f[1]=m;} par=!par; if(++bits===5){g+=B[v];bits=0;v=0;} } return g; }
+const el = (t,c,x) => { const e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; };
+function erro(msg){ const e=document.getElementById("erro"); e.textContent=msg; e.hidden=!msg; }
+
+// nomes dos remédios pelo código de barras (tabela CMED do próprio site)
+async function nomes(){
+  if (NOMES) return NOMES;
+  NOMES = {};
+  try {
+    const d = await (await fetch("precos.json")).json(), c = Object.fromEntries(d.colunas.map((n,i)=>[n,i]));
+    for (const l of d.itens){ let e = String(l[c.ean]||"").replace(/\D/g,""); if (e.length===14 && e[0]==="0") e=e.slice(1);
+      if (e) NOMES[e] = [l[c.produto], l[c.apresentacao]]; }
+  } catch(e){}
+  return NOMES;
+}
+
+async function carregar(){
+  erro("");
+  const url = `${RADAR}/radar?chave=${encodeURIComponent(CHAVE)}&dias=${DIAS}` + (GH ? `&gh=${GH}` : "");
+  let r; try { r = await fetch(url); } catch(e){ erro("Não foi possível falar com o Radar. Tente de novo."); return; }
+  if (r.status === 403){ try{ localStorage.removeItem("mb_radar_chave"); }catch(e){} CHAVE=""; document.getElementById("painel").hidden=true; document.getElementById("formChave").hidden=false; erro("Senha incorreta."); return; }
+  const d = await r.json(), N = await nomes();
+  document.getElementById("formChave").hidden = true; document.getElementById("painel").hidden = false;
+  document.getElementById("resumo").textContent = `${d.area === "cidade toda" ? "Cidade toda" : "Sua região (cerca de 3,5 km × 1,8 km)"} · últimos ${d.dias} dias · ${d.buscas_registradas} buscas contadas no total`;
+  const ul = document.getElementById("itens"); ul.innerHTML = "";
+  document.getElementById("vazio").hidden = !!d.itens.length; ul.hidden = !d.itens.length;
+  d.itens.forEach(it => {
+    const li = el("li"), esq = el("div"), n = N[it.ean];
+    esq.append(el("div","nome", n ? n[0] : "Código " + it.ean), el("div","det", n ? n[1] : ""));
+    if (it.sem_indep > 0) esq.append(el("div","falta", `${it.sem_indep} ${it.sem_indep===1?"busca":"buscas"} sem independente com preço por perto`));
+    li.append(esq, el("div","num", `${it.buscas} ${it.buscas===1?"busca":"buscas"}`)); ul.append(li);
+  });
+}
+
+document.getElementById("formChave").onsubmit = e => { e.preventDefault(); CHAVE = document.getElementById("chave").value.trim();
+  if (!CHAVE) return; try{ localStorage.setItem("mb_radar_chave", CHAVE); }catch(e){} carregar(); };
+document.querySelectorAll("[data-dias]").forEach(b => b.onclick = () => { DIAS = +b.dataset.dias;
+  document.querySelectorAll("[data-dias]").forEach(x => x.setAttribute("aria-pressed", x===b)); carregar(); });
+document.getElementById("btnRegiao").onclick = () => navigator.geolocation.getCurrentPosition(
+  p => { GH = gh6(p.coords.latitude, p.coords.longitude); document.getElementById("btnCidade").hidden=false; carregar(); },
+  () => erro("Não foi possível pegar sua localização."), {enableHighAccuracy:true, timeout:10000});
+document.getElementById("btnCidade").onclick = () => { GH = ""; document.getElementById("btnCidade").hidden=true; carregar(); };
+document.getElementById("sair").onclick = () => { try{ localStorage.removeItem("mb_radar_chave"); }catch(e){} location.reload(); };
+if (CHAVE) carregar();
+</script>
+</body>
+</html>

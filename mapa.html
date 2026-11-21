@@ -139,7 +139,7 @@ li:hover,li:focus{background:var(--bg);outline:none}
       <button data-o="preco" aria-pressed="false">Menor preço</button></div>
     <div id="estado">Carregando…</div>
     <ul id="lista"></ul>
-    <details class="dica"><summary>Sobre os dados</summary><span id="regra"></span> Manipulação, hospital e mercado não entram no total. <span id="fonte"></span> <span id="data"></span></details>
+    <details class="dica"><summary>Sobre os dados</summary><span id="regra"></span> Manipulação, hospital e mercado não entram no total. <span id="fonte"></span> O site conta as buscas por região, sem identificar ninguém, para mostrar às farmácias o que falta no bairro. <span id="data"></span></details>
   </aside>
 </main>
 
@@ -189,6 +189,18 @@ const SITE_BUSCA = [
 ];
 const termoBusca = () => NOME_REMEDIO.split(/\d/)[0].trim() || NOME_REMEDIO;
 let PRECOS = [], PRECOS_DATA = "", ordem = "dist";
+// RADAR: conta a busca de forma anônima (remédio + quadradinho de ~1 km + se havia independente com preço).
+// Não envia nome, telefone nem a localização exata. Uma vez por remédio e por região em cada visita.
+const RADAR = "https://radar.wdurant51.workers.dev";
+const AVISADOS = new Set();
+function gh6(la, lo){ const B="0123456789bcdefghjkmnpqrstuvwxyz"; let lat=[-90,90], lon=[-180,180], par=true, g="", bits=0, v=0;
+  while(g.length<6){ const f=par?lon:lat, x=par?lo:la, m=(f[0]+f[1])/2; if(x>=m){v=(v<<1)|1;f[0]=m;}else{v=v<<1;f[1]=m;} par=!par; if(++bits===5){g+=B[v];bits=0;v=0;} } return g; }
+function avisarRadar(pos, lista){
+  if(!EAN || !pos) return;
+  const g = gh6(pos[0], pos[1]), k = EAN + g; if (AVISADOS.has(k)) return; AVISADOS.add(k);
+  const indep = lista.filter(p => p.t==="indep" && (precoDe(p)||{}).valor).length;
+  try { fetch(RADAR + "/contar", {method:"POST", headers:{"Content-Type":"text/plain"}, body:JSON.stringify({ean:EAN, gh:g, indep}), keepalive:true}).catch(()=>{}); } catch(e){}
+}
 function precoDe(p){
   if(!EAN) return null;
   const sb = SITE_BUSCA.find(([re])=>re.test(p.bruto));
@@ -296,6 +308,7 @@ async function atualizar(){
     return {pos, nome:f.nome?nomeBonito(f.nome):"Farmácia sem nome", bruto:semAc(f.nome), end, t:tipo(f), d:distancia(centro,pos),
             aprox: f.precisao==="rua"||f.precisao==="cep", prec:f.precisao};
   }).filter(p=>p.d<=raio).sort((a,b)=>a.d-b.d);
+  if (centro[0]!==-23.5614 || centro[1]!==-46.6559) avisarRadar(centro, pts);   // não conta o ponto inicial padrão
   const metros = p => p.aprox ? `≈ ${Math.max(100, Math.round(p.d/100)*100)} m` : `${Math.round(p.d)} m`;
   const AVISO = {rua:"Local aproximado, pela rua", cep:"Local aproximado, pelo CEP"};
 

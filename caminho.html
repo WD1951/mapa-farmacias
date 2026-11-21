@@ -199,6 +199,12 @@ function gh6(la, lo){ const B="0123456789bcdefghjkmnpqrstuvwxyz"; let lat=[-90,9
 function avisarRadar(pos, lista){
   if(!EAN || !pos) return;
   const g = gh6(pos[0], pos[1]), k = EAN + g; if (AVISADOS.has(k)) return; AVISADOS.add(k);
+  // no máximo uma vez por remédio, região e dia neste celular (recarregar a página não conta de novo)
+  const hoje = new Date(Date.now() - 3*3600e3).toISOString().slice(0,10);
+  let feitos = {}; try { feitos = JSON.parse(localStorage.getItem("mb_radar_avisos")) || {}; } catch(e){}
+  if (feitos[k] === hoje) return;
+  for (const x in feitos) if (feitos[x] !== hoje) delete feitos[x];
+  feitos[k] = hoje; try { localStorage.setItem("mb_radar_avisos", JSON.stringify(feitos)); } catch(e){}
   const indep = lista.filter(p => p.t==="indep" && (precoDe(p)||{}).valor).length;
   try { fetch(RADAR + "/contar", {method:"POST", headers:{"Content-Type":"text/plain"}, body:JSON.stringify({ean:EAN, gh:g, indep}), keepalive:true}).catch(()=>{}); } catch(e){}
 }

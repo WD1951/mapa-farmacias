@@ -52,6 +52,7 @@ li:last-child{border-bottom:0}
       <button type="button" class="sec" id="btnRegiao">Perto de mim</button>
       <button type="button" class="sec" id="btnCidade" hidden>Cidade toda</button>
       <button type="button" class="sec" id="sair">Sair</button>
+      <button type="button" class="sec" id="zerar">Zerar contagem</button>
     </div>
     <p class="resumo" id="resumo"></p>
     <ul id="itens"></ul>
@@ -109,6 +110,12 @@ document.getElementById("btnRegiao").onclick = () => navigator.geolocation.getCu
   () => erro("Não foi possível pegar sua localização."), {enableHighAccuracy:true, timeout:10000});
 document.getElementById("btnCidade").onclick = () => { GH = ""; document.getElementById("btnCidade").hidden=true; carregar(); };
 document.getElementById("sair").onclick = () => { try{ localStorage.removeItem("mb_radar_chave"); }catch(e){} location.reload(); };
+document.getElementById("zerar").onclick = async () => {
+  if (!confirm("Apagar TODAS as buscas contadas até agora? Use só para limpar testes. Não dá para desfazer.")) return;
+  try { const r = await fetch(`${RADAR}/limpar?chave=${encodeURIComponent(CHAVE)}`, {method:"POST"});
+    if (!r.ok) { erro("Não foi possível zerar."); return; } } catch(e){ erro("Não foi possível falar com o Radar."); return; }
+  carregar();
+};
 if (CHAVE) carregar();
 </script>
 </body>

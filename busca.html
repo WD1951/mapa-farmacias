@@ -301,7 +301,8 @@ function item(r, marca){
     d.append(el("span","mut2", est ? " no site" : " no site (esgotado)"));
     esq.append(d);
   });
-  if (precosRede(r).length){ const ac = el("div","acoes"); ac.append(linkPerto(r), linkCaminho(r), botaoCesta(r)); esq.append(ac); }
+  // mesma tela para todos: com ou sem preço real, o remédio sempre leva ao mapa
+  { const ac = el("div","acoes"); ac.append(linkPerto(r), linkCaminho(r), botaoCesta(r)); esq.append(ac); }
   esq.append(el("div","cmed", `${r.produto} ${r.apresentacao}`.replace(/\s+/g," ")));
   const dir = el("div","preco");
   dir.append(el("span","teto","teto da lei"));

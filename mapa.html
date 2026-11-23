@@ -187,6 +187,9 @@ const SITE_BUSCA = [
   [/drogasil/, "https://www.drogasil.com.br/search?w="],
   [/droga raia|drogaraia|\braia\b/, "https://www.drogaraia.com.br/search?w="]
 ];
+const TETO = parseFloat(PARAM.get("teto")) || 0;
+const avisoTeto = () => "Preço ainda não verificado nas farmácias. Perto não quer dizer que tenha em estoque." +
+  (TETO ? ` Pela lei, esta embalagem não pode passar de R$ ${TETO.toFixed(2).replace(".",",")}.` : "");
 const termoBusca = () => NOME_REMEDIO.split(/\d/)[0].trim() || NOME_REMEDIO;
 let PRECOS = [], PRECOS_DATA = "", ordem = "dist";
 // RADAR: conta a busca de forma anônima (remédio + quadradinho de ~1 km + se havia independente com preço).
@@ -232,7 +235,7 @@ async function carregarPrecos(){
   const s = document.createElement("span"); s.className = "mutc";
   s.textContent = PRECOS.length
     ? `Preço no site da rede (${PRECOS_DATA}), comprando pelo app. No balcão pode ser outro.`
-    : "Nenhuma rede tem preço para este item hoje.";
+    : avisoTeto();
   const t = document.createElement("a"); t.href = "busca.html"+(termoBusca()?"?q="+encodeURIComponent(termoBusca()):""); t.textContent = "Trocar remédio";
   s.append(" ", t);
   box.append(b, s);

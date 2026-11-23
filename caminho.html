@@ -175,6 +175,9 @@ function termoBusca(){              // nome do remédio até a dosagem, ex.: "Lo
   const n = NOME_REMEDIO.split(/\d/)[0].trim();
   return n || NOME_REMEDIO;
 }
+const TETO = parseFloat(PARAM.get("teto")) || 0;
+const avisoTeto = () => "Preço ainda não verificado nas farmácias. Perto não quer dizer que tenha em estoque." +
+  (TETO ? ` Pela lei, esta embalagem não pode passar de R$ ${TETO.toFixed(2).replace(".",",")}.` : "");
 let PRECOS = [], PRECOS_DATA = "";
 if (EAN){
   fetch("precos_redes.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(x=>{
@@ -184,7 +187,7 @@ if (EAN){
     const box=$("remedio"); box.hidden=false; $("ordem").hidden=false;
     box.innerHTML=""; const b=document.createElement("b"); b.textContent=NOME_REMEDIO||"Remédio escolhido";
     const s=document.createElement("span"); s.className="mutc";
-    s.textContent=PRECOS.length?` Preço no site da rede, lido em ${PRECOS_DATA}. Vale comprando pelo app e retirando na loja; no balcão pode ser outro.`:" Nenhuma rede tem preço para este item hoje.";
+    s.textContent=PRECOS.length?` Preço no site da rede, lido em ${PRECOS_DATA}. Vale comprando pelo app e retirando na loja; no balcão pode ser outro.`:" "+avisoTeto();
     const t=document.createElement("a"); t.href="busca.html"+(termoBusca()?"?q="+encodeURIComponent(termoBusca()):""); t.textContent=" Trocar remédio";
     box.append(b,s,t);
     if(resultados.length) desenharLista();
